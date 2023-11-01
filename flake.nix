@@ -94,11 +94,11 @@
 
               virtualisation.vmVariant = {
 
-                # virtualisation.virtualbox.host.enable = true;
-                # virtualisation.virtualbox.host.enableExtensionPack = true;
                 # users.extraGroups.vboxusers.members = [ "nixuser" ];
                 # virtualisation.virtualbox.guest.enable = true;
                 # virtualisation.virtualbox.guest.x11 = true;
+                # virtualisation.virtualbox.host.enable = true;
+                # virtualisation.virtualbox.host.enableExtensionPack = true;
 
                 virtualisation.useNixStoreImage = true;
                 virtualisation.writableStore = true; # TODO: hardening
@@ -109,7 +109,7 @@
                 virtualisation.libvirtd.enable = true;
 
                 programs.dconf.enable = true;
-                # security.polkit.enable = true;
+                # security.polkit.enable = true; # TODO: hardening?
 
                 environment.variables = {
                   VAGRANT_DEFAULT_PROVIDER = "libvirt";
@@ -123,8 +123,6 @@
                   # '';
 
                 };
-
-
 
                 virtualisation.memorySize = 1024 * 3; # Use MiB memory.
                 virtualisation.diskSize = 1024 * 16; # Use MiB memory.
@@ -285,7 +283,6 @@
 
                 vagrant
                 direnv # misses the config
-                libcgroup
               ];
 
               system.stateVersion = "22.11";
