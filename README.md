@@ -7,7 +7,7 @@ Virtualization and Emulation with nix
 
 Remote:
 ```bash
-nix run github:ES-Nix/ve#vm
+nix run --refresh github:ES-Nix/ve#vm
 ```
 
 
