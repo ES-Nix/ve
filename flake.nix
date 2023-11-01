@@ -199,6 +199,69 @@
                       && vagrant box list
                     ''
                   )
+
+                  (
+                    let
+                      vagrantFile = pkgs.writeText "vagrantfile" ''
+                        # All Vagrant configuration is done below. The "2" in Vagrant.configure
+                        # configures the configuration version (we support older styles for
+                        # backwards compatibility). Please don't change it unless you know what
+                        # you're doing.
+                        Vagrant.configure("2") do |config|
+                          # Every Vagrant development environment requires a box. You can search for
+                          # boxes at https://vagrantcloud.com/search.
+                          config.vm.box = "generic/alpine316"
+
+                          config.vm.provider :libvirt do |v|
+                            v.cpus=8
+                            v.memory = "2048"
+                          end
+
+                          config.vm.synced_folder '.', '/home/vagrant/code'
+
+                          config.vm.provision "shell", inline: <<-SHELL
+
+                            apk add --no-cache xz shadow \
+                            && addgroup vagrant wheel \
+                            && addgroup vagrant kvm \
+                            && chown -v root:kvm /dev/kvm \
+                            && usermod --append --groups kvm vagrant
+
+                            # https://stackoverflow.com/a/59103173
+                            apk add --no-cache tzdata
+                            test -d /etc || mkdir -pv /etc
+                            echo 'America/Recife' > /etc/timezone
+
+                            # https://unix.stackexchange.com/a/400140
+                            echo
+                            df -h /tmp && sudo mount -o remount,size=2G /tmp/ && df -h /tmp
+                            echo
+
+                            echo 'vagrant:123' | chpasswd
+
+                            su vagrant -lc \
+                            '
+                              env | sort
+                              echo
+
+                              wget -qO- http://ix.io/4Cj0 | sh -
+
+                              echo $PATH
+                              export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
+                              echo $PATH
+
+                              # wget -qO- http://ix.io/ | sh -
+                            '
+                        SHELL
+                        end
+                      '';
+                    in
+                    writeScriptBin "copy-vagrantfiles" ''
+                      cp -v "${vagrantFile}" /home/nixuser/vagrant-examples
+                      chown $(id -nu):$(id -gn) -Rv /home/nixuser/vagrant-examples
+                    ''
+                  )
+
                 ];
                 shell = pkgs.bashInteractive;
                 uid = 1234;
