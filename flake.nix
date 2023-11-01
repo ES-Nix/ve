@@ -58,18 +58,14 @@
       nixosConfigurations.vm = nixpkgs.lib.nixosSystem {
         # system = "${suportedSystem}";
         # Really proud of this hack :fire:
-        system = if (import nixpkgs { system = "x86_64-linux"; }).stdenv.isx86_64 then "x86_64-linux" else "aarch64-linux";
+        # nix --system aarch64-linux eval --json nixpkgs#stdenv.isx86_64
+        # nix --system x86_64-linux eval --json nixpkgs#stdenv.isx86_64
+        # system = if (import nixpkgs { system = "x86_64-linux"; }).stdenv.isx86_64 then "x86_64-linux" else "aarch64-linux";
+        system = if (import nixpkgs { system = "aarch64-linux"; }).stdenv.isx86_64 then "x86_64-linux" else "aarch64-linux";
         modules = [
-          # Build this VM with nix build  ./#nixosConfigurations.vm.config.system.build.vm
-          # Then run is with: ./result/bin/run-nixos-vm
-          # To be able to connect with ssh enable port forwarding with:
-          # export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200" ./result/bin/run-nixos-vm
           # export QEMU_NET_OPTS="hostfwd=tcp::2200-:10022" && nix run .#vm
           # Then connect with ssh -p 2200 nixuser@localhost
           # ps -p $(pgrep -f qemu-kvm) -o args | tr ' ' '\n'
-          # ssh-keygen -R '[localhost]:2200' 1>/dev/null 2>/dev/null; \
-          # ssh -X -Y -o StrictHostKeyChecking=no -o GlobalKnownHostsFile=/dev/null \
-          # -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -p 2200 nixuser@localhost
           ({ config, nixpkgs, pkgs, lib, modulesPath, ... }:
             let
               nixuserKeys = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExR+PSB/jBwJYKfpLN+MMXs3miRn70oELTV3sXdgzpr";

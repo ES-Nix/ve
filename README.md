@@ -15,3 +15,5 @@ Local:
 ```bash
 export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200" && nix run .#vm
 ```
+
+
