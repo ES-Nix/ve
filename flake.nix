@@ -94,11 +94,11 @@
 
               virtualisation.vmVariant = {
 
-                users.extraGroups.vboxusers.members = [ "nixuser" ];
-                virtualisation.virtualbox.guest.enable = true;
-                virtualisation.virtualbox.guest.x11 = true;
-                virtualisation.virtualbox.host.enable = true;
-                virtualisation.virtualbox.host.enableExtensionPack = true;
+                # users.extraGroups.vboxusers.members = [ "nixuser" ];
+                # virtualisation.virtualbox.guest.enable = true;
+                # virtualisation.virtualbox.guest.x11 = true;
+                # virtualisation.virtualbox.host.enable = true;
+                # virtualisation.virtualbox.host.enableExtensionPack = true;
 
                 virtualisation.useNixStoreImage = true;
                 virtualisation.writableStore = true; # TODO: hardening
