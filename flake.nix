@@ -241,7 +241,7 @@
                 security.sudo.wheelNeedsPassword = false; # TODO: hardening
                 users.users.nixuser = {
                   isSystemUser = true;
-                  password = "101";
+                  password = "101"; # TODO: hardening
                   createHome = true;
                   home = "/home/nixuser";
                   homeMode = "0700";
