@@ -58,7 +58,7 @@
       nixosConfigurations.vm = nixpkgs.lib.nixosSystem {
         # system = "${suportedSystem}";
         # Really proud of this hack :fire:
-        system = if (import nixpkgs { system = "x86_64-linux"; }).stdenv.isAarch64 then "aarch64-linux" else "x86_64-linux";
+        system = if (import nixpkgs { system = "x86_64-linux"; }).stdenv.isx86_64 then "x86_64-linux" else "aarch64-linux";
         modules = [
           # Build this VM with nix build  ./#nixosConfigurations.vm.config.system.build.vm
           # Then run is with: ./result/bin/run-nixos-vm
