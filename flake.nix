@@ -257,8 +257,9 @@
                       '';
                     in
                     writeScriptBin "copy-vagrantfiles" ''
-                      cp -v "${vagrantFile}" /home/nixuser/vagrant-examples
-                      chown $(id -nu):$(id -gn) -Rv /home/nixuser/vagrant-examples
+                      mkdir -pv /home/nixuser/vagrant-examples/{alpine,ubuntu}
+                      cp -v "${vagrantFile}" /home/nixuser/vagrant-examples/alpine/Vagrantfile
+                      chown 0664 -v /home/nixuser/vagrant-examples/alpine/Vagrantfile
                     ''
                   )
 
