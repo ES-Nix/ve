@@ -238,16 +238,7 @@
               # https://nixos.wiki/wiki/Libvirt
               # https://discourse.nixos.org/t/set-up-vagrant-with-libvirt-qemu-kvm-on-nixos/14653
               boot.extraModprobeConfig = "options kvm_intel nested=1";
-              boot.kernelModules = [
-                "kvm-amd"
-                "kvm-intel"
-                "xt_mark"
-                "xt_comment"
-                "xt_multiport"
-                "iptable_nat"
-                "iptable_filter"
-                "xt_nat"
-              ];
+
 
               # https://www.reddit.com/r/NixOS/comments/wcxved/i_gave_an_adhoc_lightning_talk_at_mch2022/
               # Matthew Croughan - Use flake.nix, not Dockerfile - MCH2022

@@ -153,3 +153,13 @@
                       ];
                       */
 
+              boot.kernelModules = [
+                "kvm-amd"
+                "kvm-intel"
+                "xt_mark"
+                "xt_comment"
+                "xt_multiport"
+                "iptable_nat"
+                "iptable_filter"
+                "xt_nat"
+              ];
