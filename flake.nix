@@ -3,67 +3,74 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-22.11";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = all@{ self, nixpkgs, ... }:
+  outputs = allAttrs@{ self, nixpkgs, flake-utils, ... }:
     let
-      pkgsAllowUnfree = import nixpkgs {
-        system = "x86_64-linux";
-        # system = "aarch64-linux";
-        config = { allowUnfree = true; };
-      };
+      suportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        # "aarch64-darwin"
+        # "x86_64-darwin"
+      ];
     in
-    {
-      nixosConfigurations.vm = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [
-          # Build this VM with nix build  ./#nixosConfigurations.vm.config.system.build.vm
-          # Then run is with: ./result/bin/run-nixos-vm
-          # To be able to connect with ssh enable port forwarding with:
-          # export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200" ./result/bin/run-nixos-vm
-          # export QEMU_NET_OPTS="hostfwd=tcp::2200-:10022" && nix run .#vm
-          # Then connect with ssh -p 2200 nixuser@localhost
-          # ps -p $(pgrep -f qemu-kvm) -o args | tr ' ' '\n'
-          # ssh-keygen -R '[localhost]:2200' 1>/dev/null 2>/dev/null; \
-          # ssh -X -Y -o StrictHostKeyChecking=no -o GlobalKnownHostsFile=/dev/null \
-          # -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -p 2200 nixuser@localhost
-          ({ config, nixpkgs, pkgs, lib, modulesPath, ... }:
-            let
-              nixuserKeys = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExR+PSB/jBwJYKfpLN+MMXs3miRn70oELTV3sXdgzpr";
-              pedroKeys = "ssh-ed25519 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPOK55vtFrqxd5idNzCd2nhr5K3ocoyw1JKWSM1E7f9i pedroalencarregis@hotmail.com";
-            in
-            {
-              # Internationalisation options
-              # i18n.defaultLocale = "en_US.UTF-8";
-              i18n.defaultLocale = "pt_BR.UTF-8";
-              console.keyMap = "br-abnt2";
-              #
-              # virtualisation.useNixStoreImage = true;
-              # virtualisation.writableStore = true; # TODO
-              # Options for the screen
-              virtualisation.vmVariant = {
+    flake-utils.lib.eachSystem suportedSystems (suportedSystem:
+      let
+        pkgsAllowUnfree = import nixpkgs { system = suportedSystem; config = { allowUnfree = true; }; };
 
-                # virtualisation.virtualbox.host.enable = true;
-                # virtualisation.virtualbox.host.enableExtensionPack = true;
-                # users.extraGroups.vboxusers.members = [ "nixuser" ];
-                # virtualisation.virtualbox.guest.enable = true;
-                # virtualisation.virtualbox.guest.x11 = true;
+      in
+      {
+        nixosConfigurations.vm = nixpkgs.lib.nixosSystem {
+          system = "${suportedSystem}";
+          modules = [
+            # Build this VM with nix build  ./#nixosConfigurations.vm.config.system.build.vm
+            # Then run is with: ./result/bin/run-nixos-vm
+            # To be able to connect with ssh enable port forwarding with:
+            # export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200" ./result/bin/run-nixos-vm
+            # export QEMU_NET_OPTS="hostfwd=tcp::2200-:10022" && nix run .#vm
+            # Then connect with ssh -p 2200 nixuser@localhost
+            # ps -p $(pgrep -f qemu-kvm) -o args | tr ' ' '\n'
+            # ssh-keygen -R '[localhost]:2200' 1>/dev/null 2>/dev/null; \
+            # ssh -X -Y -o StrictHostKeyChecking=no -o GlobalKnownHostsFile=/dev/null \
+            # -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -p 2200 nixuser@localhost
+            ({ config, nixpkgs, pkgs, lib, modulesPath, ... }:
+              let
+                nixuserKeys = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExR+PSB/jBwJYKfpLN+MMXs3miRn70oELTV3sXdgzpr";
+                pedroKeys = "ssh-ed25519 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPOK55vtFrqxd5idNzCd2nhr5K3ocoyw1JKWSM1E7f9i pedroalencarregis@hotmail.com";
+              in
+              {
+                # Internationalisation options
+                # i18n.defaultLocale = "en_US.UTF-8";
+                i18n.defaultLocale = "pt_BR.UTF-8";
+                console.keyMap = "br-abnt2";
+                #
+                # virtualisation.useNixStoreImage = true;
+                # virtualisation.writableStore = true; # TODO
+                # Options for the screen
+                virtualisation.vmVariant = {
 
-                virtualisation.useNixStoreImage = true;
-                virtualisation.writableStore = true; # TODO: hardening
+                  # virtualisation.virtualbox.host.enable = true;
+                  # virtualisation.virtualbox.host.enableExtensionPack = true;
+                  # users.extraGroups.vboxusers.members = [ "nixuser" ];
+                  # virtualisation.virtualbox.guest.enable = true;
+                  # virtualisation.virtualbox.guest.x11 = true;
 
-                virtualisation.docker.enable = true;
-                virtualisation.podman.enable = true;
+                  virtualisation.useNixStoreImage = true;
+                  virtualisation.writableStore = true; # TODO: hardening
 
-                # networking.useDHCP = false;
-                # networking.interfaces.enp0s3 = { useDHCP = true; };
-                # networking.interfaces.ens3.useDHCP = true;
+                  virtualisation.docker.enable = true;
+                  virtualisation.podman.enable = true;
 
-                # networking.firewall.checkReversePath = false; # https://releases.nixos.org/nix-dev/2016-January/019069.html
-                # For dhcp to work and probably also want:
-                # networking.firewall.trustedInterfaces = [ "virbr0" ];
+                  # networking.useDHCP = false;
+                  # networking.interfaces.enp0s3 = { useDHCP = true; };
+                  # networking.interfaces.ens3.useDHCP = true;
 
-                /*
+                  # networking.firewall.checkReversePath = false; # https://releases.nixos.org/nix-dev/2016-January/019069.html
+                  # For dhcp to work and probably also want:
+                  # networking.firewall.trustedInterfaces = [ "virbr0" ];
+
+                  /*
                           Enables libvirtd
                           https://discourse.nixos.org/t/set-up-vagrant-with-libvirt-qemu-kvm-on-nixos/14653
 
@@ -133,177 +140,177 @@
                           user = "1000"
                           '';
                         */
-                virtualisation.libvirtd.enable = true;
+                  virtualisation.libvirtd.enable = true;
 
-                #  virtualisation.libvirtd = {
-                #    enable = true;
-                #    allowedBridges = [ "nm-bridge" "virbr0" ];
-                #    onBoot = "ignore";
-                #    onShutdown = "shutdown";
-                #    qemu = {
-                #      package = pkgs.qemu_kvm;
-                #      ovmf.enable = true; # https://myme.no/posts/2021-11-25-nixos-home-assistant.html
-                #      # ovmf.package = (pkgs.OVMFFull.override { secureBoot = true; tpmSupport = true; });
-                #      runAsRoot = true;
-                #    };
-                #    extraConfig = ''
-                #      unix_sock_group="libvirtd"
-                #      unix_sock_rw_perms="0770"
-                #      log_filters="1:qemu"
-                #      log_outputs="1:journald"
-                #    '';
-                #  };
+                  #  virtualisation.libvirtd = {
+                  #    enable = true;
+                  #    allowedBridges = [ "nm-bridge" "virbr0" ];
+                  #    onBoot = "ignore";
+                  #    onShutdown = "shutdown";
+                  #    qemu = {
+                  #      package = pkgs.qemu_kvm;
+                  #      ovmf.enable = true; # https://myme.no/posts/2021-11-25-nixos-home-assistant.html
+                  #      # ovmf.package = (pkgs.OVMFFull.override { secureBoot = true; tpmSupport = true; });
+                  #      runAsRoot = true;
+                  #    };
+                  #    extraConfig = ''
+                  #      unix_sock_group="libvirtd"
+                  #      unix_sock_rw_perms="0770"
+                  #      log_filters="1:qemu"
+                  #      log_outputs="1:journald"
+                  #    '';
+                  #  };
 
-                programs.dconf.enable = true;
-                # security.polkit.enable = true;
+                  programs.dconf.enable = true;
+                  # security.polkit.enable = true;
 
-                environment.variables = {
-                  VAGRANT_DEFAULT_PROVIDER = "libvirt";
+                  environment.variables = {
+                    VAGRANT_DEFAULT_PROVIDER = "libvirt";
 
-                  # programs.dconf.enable = true;
-                  # VIRSH_DEFAULT_CONNECT_URI="qemu:///system";
-                  VIRSH_DEFAULT_CONNECT_URI = "qemu:///session";
-                  # programs.dconf.profiles = pkgs.writeText "org/virt-manager/virt-manager/connections" ''
-                  #  autoconnect = ["qemu:///system"];
-                  #  uris = ["qemu:///system"];
-                  # '';
+                    # programs.dconf.enable = true;
+                    # VIRSH_DEFAULT_CONNECT_URI="qemu:///system";
+                    VIRSH_DEFAULT_CONNECT_URI = "qemu:///session";
+                    # programs.dconf.profiles = pkgs.writeText "org/virt-manager/virt-manager/connections" ''
+                    #  autoconnect = ["qemu:///system"];
+                    #  uris = ["qemu:///system"];
+                    # '';
 
+                  };
+
+                  systemd.services.libvirtd = {
+                    # Add binaries to path so that hooks can use it
+                    path =
+                      let
+                        env = pkgs.buildEnv {
+                          name = "qemu-hook-env";
+                          paths = with pkgs; [
+                            bash
+                            libvirt
+                            kmod
+                            systemd
+                            ripgrep
+                            sd
+                          ];
+                        };
+                      in
+                      [ env ];
+                  };
+
+                  virtualisation.memorySize = 1024 * 3; # Use MiB memory.
+                  virtualisation.diskSize = 1024 * 16; # Use MiB memory.
+                  virtualisation.cores = 8; # Number of cores.
+                  virtualisation.graphics = true;
+                  # virtualisation.forwardPorts = [
+                  #   { from = "host"; host.port = 8888; guest.port = 80; }
+                  # ];
+
+                  virtualisation.resolution = {
+                    x = 1280;
+                    y = 1024;
+                  };
+
+                  virtualisation.qemu.options = [
+                    # Better display option
+                    # TODO: -display sdl,gl=on
+                    # https://gitlab.com/qemu-project/qemu/-/issues/761
+                    "-vga virtio"
+                    "-display gtk,zoom-to-fit=false"
+                    # Enable copy/paste
+                    # https://www.kraxel.org/blog/2021/05/qemu-cut-paste/
+                    "-chardev qemu-vdagent,id=ch1,name=vdagent,clipboard=on"
+                    "-device virtio-serial-pci"
+                    "-device virtserialport,chardev=ch1,id=ch1,name=com.redhat.spice.0"
+
+                    # https://serverfault.com/a/1119403
+                    # "-device intel-iommu,intremap=on"
+                  ];
                 };
 
-                systemd.services.libvirtd = {
-                  # Add binaries to path so that hooks can use it
-                  path =
-                    let
-                      env = pkgs.buildEnv {
-                        name = "qemu-hook-env";
-                        paths = with pkgs; [
-                          bash
-                          libvirt
-                          kmod
-                          systemd
-                          ripgrep
-                          sd
-                        ];
-                      };
-                    in
-                    [ env ];
+                users.users.root = {
+                  password = "root";
+                  initialPassword = "root";
+                  openssh.authorizedKeys.keyFiles = [
+                    "${ pkgs.writeText "nixuser-keys.pub" "${toString nixuserKeys}" }"
+                    "${ pkgs.writeText "pedro-keys.pub" "${toString pedroKeys}" }"
+                  ];
                 };
 
-                virtualisation.memorySize = 1024 * 3; # Use MiB memory.
-                virtualisation.diskSize = 1024 * 16; # Use MiB memory.
-                virtualisation.cores = 8; # Number of cores.
-                virtualisation.graphics = true;
-                # virtualisation.forwardPorts = [
-                #   { from = "host"; host.port = 8888; guest.port = 80; }
-                # ];
+                # https://nixos.wiki/wiki/NixOS:nixos-rebuild_build-vm
+                users.extraGroups.nixgroup.gid = 999;
 
-                virtualisation.resolution = {
-                  x = 1280;
-                  y = 1024;
+                security.sudo.wheelNeedsPassword = false; # TODO: hardening
+                users.users.nixuser = {
+                  isSystemUser = true;
+                  password = "101";
+                  createHome = true;
+                  home = "/home/nixuser";
+                  homeMode = "0700";
+                  description = "The VM tester user";
+                  group = "nixgroup";
+                  extraGroups = [
+                    "podman"
+                    "kvm"
+                    "libvirtd"
+                    "qemu-libvirtd"
+                    "wheel"
+                    "docker"
+                  ];
+                  packages = with pkgs; [
+                    direnv
+                    file
+                    gnumake
+                    which
+                    coreutils
+                    openssh
+                    virt-manager
+                  ];
+                  shell = pkgs.bashInteractive;
+                  uid = 1234;
+                  autoSubUidGidRange = true;
+
+                  openssh.authorizedKeys.keyFiles = [
+                    "${ pkgs.writeText "nixuser-keys.pub" "${toString nixuserKeys}" }"
+                    "${ pkgs.writeText "pedro-keys.pub" "${toString pedroKeys}" }"
+                  ];
+
+                  openssh.authorizedKeys.keys = [
+                    "${toString nixuserKeys}"
+                    "${toString pedroKeys}"
+                  ];
                 };
 
-                virtualisation.qemu.options = [
-                  # Better display option
-                  # TODO: -display sdl,gl=on
-                  # https://gitlab.com/qemu-project/qemu/-/issues/761
-                  "-vga virtio"
-                  "-display gtk,zoom-to-fit=false"
-                  # Enable copy/paste
-                  # https://www.kraxel.org/blog/2021/05/qemu-cut-paste/
-                  "-chardev qemu-vdagent,id=ch1,name=vdagent,clipboard=on"
-                  "-device virtio-serial-pci"
-                  "-device virtserialport,chardev=ch1,id=ch1,name=com.redhat.spice.0"
+                # services.nfs.server.enable = true;
 
-                  # https://serverfault.com/a/1119403
-                  # "-device intel-iommu,intremap=on"
-                ];
-              };
+                # https://github.com/NixOS/nixpkgs/issues/21332#issuecomment-268730694
+                services.openssh = {
+                  allowSFTP = true;
+                  kbdInteractiveAuthentication = false;
+                  enable = true;
+                  forwardX11 = false;
+                  passwordAuthentication = false;
+                  permitRootLogin = "yes";
+                  ports = [ 10022 ];
+                  authorizedKeysFiles = [
+                    "${ pkgs.writeText "nixuser-keys.pub" "${toString nixuserKeys}" }"
+                    "${ pkgs.writeText "pedro-keys.pub" "${toString pedroKeys}" }"
+                  ];
+                };
 
-              users.users.root = {
-                password = "root";
-                initialPassword = "root";
-                openssh.authorizedKeys.keyFiles = [
-                  "${ pkgs.writeText "nixuser-keys.pub" "${toString nixuserKeys}" }"
-                  "${ pkgs.writeText "pedro-keys.pub" "${toString pedroKeys}" }"
-                ];
-              };
-
-              # https://nixos.wiki/wiki/NixOS:nixos-rebuild_build-vm
-              users.extraGroups.nixgroup.gid = 999;
-
-              security.sudo.wheelNeedsPassword = false; # TODO: hardening
-              users.users.nixuser = {
-                isSystemUser = true;
-                password = "101";
-                createHome = true;
-                home = "/home/nixuser";
-                homeMode = "0700";
-                description = "The VM tester user";
-                group = "nixgroup";
-                extraGroups = [
-                  "podman"
-                  "kvm"
-                  "libvirtd"
-                  "qemu-libvirtd"
-                  "wheel"
-                  "docker"
-                ];
-                packages = with pkgs; [
-                  direnv
-                  file
-                  gnumake
-                  which
-                  coreutils
-                  openssh
-                  virt-manager
-                ];
-                shell = pkgs.bashInteractive;
-                uid = 1234;
-                autoSubUidGidRange = true;
-
-                openssh.authorizedKeys.keyFiles = [
-                  "${ pkgs.writeText "nixuser-keys.pub" "${toString nixuserKeys}" }"
-                  "${ pkgs.writeText "pedro-keys.pub" "${toString pedroKeys}" }"
+                # https://nixos.wiki/wiki/Libvirt
+                # https://discourse.nixos.org/t/set-up-vagrant-with-libvirt-qemu-kvm-on-nixos/14653
+                boot.extraModprobeConfig = "options kvm_intel nested=1";
+                boot.kernelModules = [
+                  "kvm-amd"
+                  "kvm-intel"
+                  "xt_mark"
+                  "xt_comment"
+                  "xt_multiport"
+                  "iptable_nat"
+                  "iptable_filter"
+                  "xt_nat"
                 ];
 
-                openssh.authorizedKeys.keys = [
-                  "${toString nixuserKeys}"
-                  "${toString pedroKeys}"
-                ];
-              };
-
-              # services.nfs.server.enable = true;
-
-              # https://github.com/NixOS/nixpkgs/issues/21332#issuecomment-268730694
-              services.openssh = {
-                allowSFTP = true;
-                kbdInteractiveAuthentication = false;
-                enable = true;
-                forwardX11 = false;
-                passwordAuthentication = false;
-                permitRootLogin = "yes";
-                ports = [ 10022 ];
-                authorizedKeysFiles = [
-                  "${ pkgs.writeText "nixuser-keys.pub" "${toString nixuserKeys}" }"
-                  "${ pkgs.writeText "pedro-keys.pub" "${toString pedroKeys}" }"
-                ];
-              };
-
-              # https://nixos.wiki/wiki/Libvirt
-              # https://discourse.nixos.org/t/set-up-vagrant-with-libvirt-qemu-kvm-on-nixos/14653
-              boot.extraModprobeConfig = "options kvm_intel nested=1";
-              boot.kernelModules = [
-                "kvm-amd"
-                "kvm-intel"
-                "xt_mark"
-                "xt_comment"
-                "xt_multiport"
-                "iptable_nat"
-                "iptable_filter"
-                "xt_nat"
-              ];
-
-              /*
+                /*
                         https://discuss.linuxcontainers.org/t/podman-wont-run-containers-in-lxd-cgroup-controller-pids-unavailable/13049/2
                         https://github.com/NixOS/nixpkgs/issues/73800#issuecomment-729206223
                         https://github.com/canonical/microk8s/issues/1691#issuecomment-977543458
@@ -340,96 +347,97 @@
                       ];
                       */
 
-              # https://www.reddit.com/r/NixOS/comments/wcxved/i_gave_an_adhoc_lightning_talk_at_mch2022/
-              # Matthew Croughan - Use flake.nix, not Dockerfile - MCH2022
-              # boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+                # https://www.reddit.com/r/NixOS/comments/wcxved/i_gave_an_adhoc_lightning_talk_at_mch2022/
+                # Matthew Croughan - Use flake.nix, not Dockerfile - MCH2022
+                # boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
-              services.qemuGuest.enable = true;
+                # services.qemuGuest.enable = true;
 
-              # X configuration
-              services.xserver.enable = true;
-              services.xserver.layout = "br";
+                # X configuration
+                services.xserver.enable = true;
+                services.xserver.layout = "br";
 
-              services.xserver.displayManager.autoLogin.user = "nixuser";
+                services.xserver.displayManager.autoLogin.user = "nixuser";
 
-              services.xserver.desktopManager.xfce.enable = true;
-              services.xserver.desktopManager.xfce.enableScreensaver = false;
+                services.xserver.desktopManager.xfce.enable = true;
+                services.xserver.desktopManager.xfce.enableScreensaver = false;
 
-              # https://nixos.wiki/wiki/KDE
-              # services.xserver.displayManager.sddm.enable = true;
-              # services.xserver.desktopManager.plasma5.enable = true;
-              # services.xserver.displayManager.sddm.autoNumlock = true;
+                # https://nixos.wiki/wiki/KDE
+                # services.xserver.displayManager.sddm.enable = true;
+                # services.xserver.desktopManager.plasma5.enable = true;
+                # services.xserver.displayManager.sddm.autoNumlock = true;
 
-              services.xserver.videoDrivers = [ "qxl" ];
+                services.xserver.videoDrivers = [ "qxl" ];
 
-              # For copy/paste to work
-              services.spice-vdagentd.enable = true;
+                # For copy/paste to work
+                services.spice-vdagentd.enable = true;
 
-              # Enable ssh
-              services.sshd.enable = true;
+                # Enable ssh
+                services.sshd.enable = true;
 
-              # Included packages here
-              nixpkgs.config.allowUnfree = true;
-              nix = {
-                # package = nixpkgs.pkgs.nix;
-                extraOptions = "experimental-features = nix-command flakes";
-                readOnlyStore = true;
+                # Included packages here
+                nixpkgs.config.allowUnfree = true;
+                nix = {
+                  # package = nixpkgs.pkgs.nix;
+                  extraOptions = "experimental-features = nix-command flakes";
+                  readOnlyStore = true;
 
-                package = pkgs.nixVersions.nix_2_10;
+                  package = pkgs.nixVersions.nix_2_10;
 
-                registry.nixpkgs.flake = nixpkgs; # https://bou.ke/blog/nix-tips/
-              };
+                  registry.nixpkgs.flake = nixpkgs; # https://bou.ke/blog/nix-tips/
+                };
 
-              environment.etc."channels/nixpkgs".source = nixpkgs.outPath;
+                environment.etc."channels/nixpkgs".source = nixpkgs.outPath;
 
-              environment.systemPackages = with pkgs; [
-                bashInteractive
-                # hello
-                # pkgsCross.aarch64-multiplatform.pkgsStatic.hello
-                openssh
-                virt-manager
-                # gnome3.dconf-editor
+                environment.systemPackages = with pkgs; [
+                  bashInteractive
+                  # hello
+                  # pkgsCross.aarch64-multiplatform.pkgsStatic.hello
+                  openssh
+                  virt-manager
+                  # gnome3.dconf-editor
 
-                vagrant
-                # python3Full
-                # git
-                direnv # misses the config
-                libcgroup
-              ];
+                  vagrant
+                  # python3Full
+                  # git
+                  direnv # misses the config
+                  libcgroup
+                ];
 
-              system.stateVersion = "22.11";
-            })
+                system.stateVersion = "22.11";
+              })
 
-        ];
-        specialArgs = { inherit nixpkgs; };
-      };
+          ];
+          specialArgs = { inherit nixpkgs; };
+        };
 
-      formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
+        formatter = pkgsAllowUnfree.nixpkgs-fmt;
 
-      # Utilized by `nix run .#<name>`
-      apps.x86_64-linux.vm = {
-        type = "app";
-        program = "${self.nixosConfigurations.vm.config.system.build.vm}/bin/run-nixos-vm";
-      };
+        # Utilized by `nix run .#<name>`
+        apps.vm = {
+          type = "app";
+          program = "${self.nixosConfigurations.vm.config.system.build.vm}/bin/run-nixos-vm";
+        };
 
-      devShells.x86_64-linux.default = pkgsAllowUnfree.mkShell {
-        buildInputs = with pkgsAllowUnfree; [
-          bashInteractive
-          coreutils
-          file
-          nixpkgs-fmt
-          which
+        devShells.default = pkgsAllowUnfree.mkShell {
+          buildInputs = with pkgsAllowUnfree; [
+            bashInteractive
+            coreutils
+            file
+            nixpkgs-fmt
+            which
 
-          docker
-          podman
-        ];
+            docker
+            podman
+          ];
 
-        shellHook = ''
-          export TMPDIR=/tmp
+          shellHook = ''
+            export TMPDIR=/tmp
 
-          # Too much hardcoded?
-          export DOCKER_HOST=ssh://nixuser@localhost:2200
-        '';
-      };
-    };
+            # Too much hardcoded?
+            export DOCKER_HOST=ssh://nixuser@localhost:2200
+          '';
+        };
+      }
+    );
 }
