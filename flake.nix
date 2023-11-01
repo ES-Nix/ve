@@ -1,5 +1,5 @@
 {
-  description = "VM";
+  description = "Virtualization and Emulation with nix";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-22.11";
