@@ -21,8 +21,42 @@
 
       in
       {
+        # packages.vm = self.nixosConfigurations."${suportedSystem}".vm.config.system.build.toplevel;
+
+        formatter = pkgsAllowUnfree.nixpkgs-fmt;
+
+        # Utilized by `nix run .#<name>`
+        apps.vm = {
+          type = "app";
+          program = "${self.nixosConfigurations.vm.config.system.build.vm}/bin/run-nixos-vm";
+        };
+
+        devShells.default = pkgsAllowUnfree.mkShell {
+          buildInputs = with pkgsAllowUnfree; [
+            bashInteractive
+            coreutils
+            file
+            nixpkgs-fmt
+            which
+
+            docker
+            podman
+          ];
+
+          shellHook = ''
+            export TMPDIR=/tmp
+
+            # Too much hardcoded?
+            export DOCKER_HOST=ssh://nixuser@localhost:2200
+          '';
+        };
+      }
+    )
+
+    // {
         nixosConfigurations.vm = nixpkgs.lib.nixosSystem {
-          system = "${suportedSystem}";
+          # system = "${suportedSystem}";
+          system = "x86_64-linux";
           modules = [
             # Build this VM with nix build  ./#nixosConfigurations.vm.config.system.build.vm
             # Then run is with: ./result/bin/run-nixos-vm
@@ -350,7 +384,7 @@
                         Update to test "latest" virt-host-validate
 
 
-                      
+
                        boot.kernelParams = [
                         # "console=ttyAMA0,115200n8" # https://nixos.wiki/wiki/NixOS_on_ARM#Enable_UART
                         "swapaccount=0"
@@ -428,36 +462,5 @@
           ];
           specialArgs = { inherit nixpkgs; };
         };
-
-        # packages.vm = self.nixosConfigurations."${suportedSystem}".vm.config.system.build.toplevel;
-
-        formatter = pkgsAllowUnfree.nixpkgs-fmt;
-
-        # Utilized by `nix run .#<name>`
-        apps.vm = {
-          type = "app";
-          program = "${self.nixosConfigurations.vm.config.system.build.vm}/bin/run-nixos-vm";
-        };
-
-        devShells.default = pkgsAllowUnfree.mkShell {
-          buildInputs = with pkgsAllowUnfree; [
-            bashInteractive
-            coreutils
-            file
-            nixpkgs-fmt
-            which
-
-            docker
-            podman
-          ];
-
-          shellHook = ''
-            export TMPDIR=/tmp
-
-            # Too much hardcoded?
-            export DOCKER_HOST=ssh://nixuser@localhost:2200
-          '';
-        };
-      }
-    );
+    };
 }
