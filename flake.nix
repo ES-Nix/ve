@@ -242,7 +242,7 @@
               # Matthew Croughan - Use flake.nix, not Dockerfile - MCH2022
               # boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
-              # services.qemuGuest.enable = true;
+              services.qemuGuest.enable = true;
 
               # X configuration
               services.xserver.enable = true;
@@ -250,13 +250,13 @@
 
               services.xserver.displayManager.autoLogin.user = "nixuser";
 
-              # services.xserver.desktopManager.xfce.enable = true;
-              # services.xserver.desktopManager.xfce.enableScreensaver = false;
+              services.xserver.desktopManager.xfce.enable = true;
+              services.xserver.desktopManager.xfce.enableScreensaver = false;
 
               # https://nixos.wiki/wiki/KDE
-              services.xserver.displayManager.sddm.enable = true;
-              services.xserver.desktopManager.plasma5.enable = true;
-              services.xserver.displayManager.sddm.autoNumlock = true;
+              # services.xserver.displayManager.sddm.enable = true;
+              # services.xserver.desktopManager.plasma5.enable = true;
+              # services.xserver.displayManager.sddm.autoNumlock = true;
 
               services.xserver.videoDrivers = [ "qxl" ];
 
