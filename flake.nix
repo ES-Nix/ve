@@ -80,10 +80,10 @@
                 url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.2.10/providers/libvirt.box";
                 hash = "sha256-2h68dE9u6t+m8+gOT3YYD2fxb+/upRb3z79eth9uzEI=";
               };
-              ubuntu2304 = pkgs.fetchurl {
-                url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
-                hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
-              };
+              # ubuntu2304 = pkgs.fetchurl {
+              #   url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
+              #   hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
+              # };
 
             in
             {
@@ -94,11 +94,11 @@
 
               virtualisation.vmVariant = {
 
-                # users.extraGroups.vboxusers.members = [ "nixuser" ];
-                # virtualisation.virtualbox.guest.enable = true;
-                # virtualisation.virtualbox.guest.x11 = true;
-                # virtualisation.virtualbox.host.enable = true;
-                # virtualisation.virtualbox.host.enableExtensionPack = true;
+                users.extraGroups.vboxusers.members = [ "nixuser" ];
+                virtualisation.virtualbox.guest.enable = true;
+                virtualisation.virtualbox.guest.x11 = true;
+                virtualisation.virtualbox.host.enable = true;
+                virtualisation.virtualbox.host.enableExtensionPack = true;
 
                 virtualisation.useNixStoreImage = true;
                 virtualisation.writableStore = true; # TODO: hardening
@@ -192,10 +192,10 @@
                   openssh
                   virt-manager
 
+                  # && vagrant box add generic/ubuntu2304 "''${ubuntu2304}" --provider libvirt \
                   (
                     writeScriptBin "load-vagrant-images" ''
                       vagrant box add generic/alpine316 "${alpine316}" --provider libvirt \
-                      && vagrant box add generic/ubuntu2304 "${ubuntu2304}" --provider libvirt \
                       && vagrant box list
                     ''
                   )
