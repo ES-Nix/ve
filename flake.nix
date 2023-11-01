@@ -57,11 +57,15 @@
     // {
       nixosConfigurations.vm = nixpkgs.lib.nixosSystem {
         # system = "${suportedSystem}";
-        # Really proud of this hack :fire:
+        # Really proud/scared of this hack :fire:
         # nix --system aarch64-linux eval --json nixpkgs#stdenv.isx86_64
         # nix --system x86_64-linux eval --json nixpkgs#stdenv.isx86_64
         # system = if (import nixpkgs { system = "x86_64-linux"; }).stdenv.isx86_64 then "x86_64-linux" else "aarch64-linux";
-        system = if (import nixpkgs { system = "aarch64-linux"; }).stdenv.isx86_64 then "x86_64-linux" else "aarch64-linux";
+        system = let
+                    e = (import nixpkgs { system = "aarch64-linux"; }).stdenv.isAarch64;
+                 in
+                    if (builtins.tryEval (builtins.deepSeq e e)).success then "aarch64-linux" else "x86_64-linux";
+
         modules = [
           # export QEMU_NET_OPTS="hostfwd=tcp::2200-:10022" && nix run .#vm
           # Then connect with ssh -p 2200 nixuser@localhost
