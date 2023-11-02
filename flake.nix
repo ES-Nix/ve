@@ -202,7 +202,7 @@
 
                   (
                     let
-                      vagrantFile = pkgs.writeText "vagrantfile" ''
+                      vagrantfileAlpine = pkgs.writeText "vagrantfile-alpine" ''
                         # All Vagrant configuration is done below. The "2" in Vagrant.configure
                         # configures the configuration version (we support older styles for
                         # backwards compatibility). Please don't change it unless you know what
@@ -255,11 +255,61 @@
                         SHELL
                         end
                       '';
+
+                      vagrantfileUbuntu = pkgs.writeText "vagrantfile-alpine" ''
+                        Vagrant.configure("2") do |config|
+                          # Every Vagrant development environment requires a box. You can search for
+                          # boxes at https://vagrantcloud.com/search.
+                          # config.vm.box = "generic/ubuntu2204"
+                          config.vm.box = "alvistack/ubuntu2310"
+
+                          config.vm.provider :libvirt do |v|
+                            v.cpus=8
+                            v.memory = "3072"
+                          end
+
+                          config.vm.synced_folder '.', '/home/vagrant/code'
+
+                          config.vm.provision "shell", inline: <<-SHELL
+
+                            # TODO: revise it
+                            # https://unix.stackexchange.com/a/400140
+                            # https://stackoverflow.com/a/69288266
+                            RAM_IN_GIGAS=$(expr $(sed -n '/^MemTotal:/ s/[^0-9]//gp' /proc/meminfo) / 1024 / 1024)
+                            echo "$RAM_IN_GIGAS"
+                            # df -h /tmp && sudo mount -o remount,size="$RAM_IN_GIGAS"G /tmp/ && df -h /tmp
+
+                            su vagrant -lc \
+                            '
+                              wget -qO- http://ix.io/4yRA | sh -
+
+                              echo $PATH
+                              export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
+                              echo $PATH
+
+                              # wget -qO- http://ix.io/4AKW | sh -
+                            '
+                        SHELL
+                        end
+                      '';
+
                     in
                     writeScriptBin "copy-vagrantfiles" ''
                       mkdir -pv /home/nixuser/vagrant-examples/{alpine,ubuntu}
-                      cp -v "${vagrantFile}" /home/nixuser/vagrant-examples/alpine/Vagrantfile
-                      chown 0664 -v /home/nixuser/vagrant-examples/alpine/Vagrantfile
+
+                      cp -v "${vagrantfileAlpine}" /home/nixuser/vagrant-examples/alpine/Vagrantfile
+                      chmod 0664 -v /home/nixuser/vagrant-examples/alpine/Vagrantfile
+
+                      cp -v "${vagrantfileUbuntu}" /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
+                      chmod 0664 -v /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
+                    ''
+                  )
+
+                  (
+                    writeScriptBin "prepare-vagrant" ''
+                      copy-vagrantfiles && load-vagrant-images
+                      $(cd /home/nixuser/vagrant-examples/alpine/Vagrantfile && vagrant up)
+                      $(cd /home/nixuser/vagrant-examples/ubuntu/Vagrantfile && vagrant up)
                     ''
                   )
 
