@@ -195,7 +195,7 @@
                   (
                     writeScriptBin "load-vagrant-images" ''
                       vagrant box add generic/alpine316 "${alpine316}" --provider libvirt \
-                      && vagrant box add generic/ubuntu2304 "''${ubuntu2304}" --provider libvirt \
+                      && vagrant box add generic/ubuntu2304 "${ubuntu2304}" --provider libvirt \
                       && vagrant box list
                     ''
                   )
@@ -308,8 +308,8 @@
                   (
                     writeScriptBin "prepare-vagrant" ''
                       copy-vagrantfiles && load-vagrant-images
-                      $(cd /home/nixuser/vagrant-examples/alpine/Vagrantfile && vagrant up)
-                      $(cd /home/nixuser/vagrant-examples/ubuntu/Vagrantfile && vagrant up)
+                      $(cd /home/nixuser/vagrant-examples/alpine && vagrant up)
+                      $(cd /home/nixuser/vagrant-examples/ubuntu && vagrant up)
                     ''
                   )
 
