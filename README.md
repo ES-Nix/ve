@@ -7,7 +7,7 @@ Virtualization and Emulation with nix
 
 Remote:
 ```bash
-nix run --refresh github:ES-Nix/ve#vm
+nix run --impure --refresh github:ES-Nix/ve#vm
 ```
 
 
@@ -17,3 +17,6 @@ export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200" && nix run .#vm
 ```
 
 
+```bash
+while ! false; do clear && echo $(date +'%d/%m/%Y %H:%M:%S:%3N') && ps -u "$(echo nixbld{1..32})"; sleep 0.5; done
+```
