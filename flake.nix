@@ -125,11 +125,11 @@
 
               virtualisation.vmVariant = {
 
-                users.extraGroups.vboxusers.members = [ "nixuser" ];
-                virtualisation.virtualbox.guest.enable = true;
-                virtualisation.virtualbox.guest.x11 = true;
-                virtualisation.virtualbox.host.enable = true;
-                virtualisation.virtualbox.host.enableExtensionPack = true;
+                # users.extraGroups.vboxusers.members = [ "nixuser" ];
+                # virtualisation.virtualbox.guest.enable = true;
+                # virtualisation.virtualbox.guest.x11 = true;
+                # virtualisation.virtualbox.host.enable = true;
+                # virtualisation.virtualbox.host.enableExtensionPack = true;
 
                 virtualisation.useNixStoreImage = true;
                 virtualisation.writableStore = true; # TODO: hardening
@@ -155,7 +155,7 @@
 
                 };
 
-                virtualisation.memorySize = 1024 * 10; # Use MiB memory.
+                virtualisation.memorySize = 1024 * 8; # Use MiB memory.
                 virtualisation.diskSize = 1024 * 16; # Use MiB memory.
                 virtualisation.cores = 8; # Number of cores.
                 virtualisation.graphics = true;
@@ -344,9 +344,10 @@
                       copy-vagrantfiles && load-vagrant-images \
                       && echo
 
-                      cd /home/nixuser/vagrant-examples/alpine \
-                      && vagrant up \
-                      && cd /home/nixuser/vagrant-examples/ubuntu \
+                      # cd /home/nixuser/vagrant-examples/alpine \
+                      # && vagrant up
+
+                      cd /home/nixuser/vagrant-examples/ubuntu \
                       && vagrant up
 
                       echo
