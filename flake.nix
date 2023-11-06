@@ -42,6 +42,37 @@
 
               docker
               podman
+
+              # Graphical packages
+              # anydesk
+              # blender
+              # brave
+              # dbeaver
+              # discord
+              # ghidra
+              # gimp
+              # google-chrome
+              # inkscape
+              # insomnia
+              # kolourpaint
+              # libreoffice
+              # rustdesk
+              gitkraken
+              jetbrains.pycharm-community
+              keepassxc
+              obsidian
+              okular
+              peek
+              postman
+              qbittorrent
+              slack
+              spotify
+              tdesktop
+              virt-manager
+              vlc
+              vscodium
+              xorg.xclock
+              yt-dlp
             ];
 
             shellHook = ''
@@ -94,11 +125,11 @@
 
               virtualisation.vmVariant = {
 
-                # users.extraGroups.vboxusers.members = [ "nixuser" ];
-                # virtualisation.virtualbox.guest.enable = true;
-                # virtualisation.virtualbox.guest.x11 = true;
-                # virtualisation.virtualbox.host.enable = true;
-                # virtualisation.virtualbox.host.enableExtensionPack = true;
+                users.extraGroups.vboxusers.members = [ "nixuser" ];
+                virtualisation.virtualbox.guest.enable = true;
+                virtualisation.virtualbox.guest.x11 = true;
+                virtualisation.virtualbox.host.enable = true;
+                virtualisation.virtualbox.host.enableExtensionPack = true;
 
                 virtualisation.useNixStoreImage = true;
                 virtualisation.writableStore = true; # TODO: hardening
@@ -124,7 +155,7 @@
 
                 };
 
-                virtualisation.memorySize = 1024 * 3; # Use MiB memory.
+                virtualisation.memorySize = 1024 * 10; # Use MiB memory.
                 virtualisation.diskSize = 1024 * 16; # Use MiB memory.
                 virtualisation.cores = 8; # Number of cores.
                 virtualisation.graphics = true;
@@ -132,10 +163,13 @@
                 #   { from = "host"; host.port = 8888; guest.port = 80; }
                 # ];
 
-                virtualisation.resolution = {
-                  x = 1280;
-                  y = 1024;
-                };
+                /*
+                xdpyinfo | grep dimensions
+
+                xrandr --current
+                */
+                # virtualisation.resolution = { x = (1024 - 250); y = (768 - 250); };
+                virtualisation.resolution = lib.mkForce { x = 1024; y = 768; };
 
                 virtualisation.qemu.options = [
                   # Better display option
@@ -176,21 +210,22 @@
                 description = "The VM tester user";
                 group = "nixgroup";
                 extraGroups = [
-                  "podman"
+                  "docker"
                   "kvm"
                   "libvirtd"
+                  "podman"
                   "qemu-libvirtd"
                   "wheel"
-                  "docker"
                 ];
                 packages = with pkgs; [
+                  btop
+                  coreutils
                   direnv
                   file
                   gnumake
-                  which
-                  coreutils
                   openssh
                   virt-manager
+                  which
 
                   (
                     writeScriptBin "load-vagrant-images" ''
@@ -260,7 +295,7 @@
                         Vagrant.configure("2") do |config|
                           # Every Vagrant development environment requires a box. You can search for
                           # boxes at https://vagrantcloud.com/search.
-                          config.vm.box = "generic/ubuntu2204"
+                          config.vm.box = "generic/ubuntu2304"
 
                           config.vm.provider :libvirt do |v|
                             v.cpus=8
@@ -306,9 +341,16 @@
 
                   (
                     writeScriptBin "prepare-vagrant" ''
-                      copy-vagrantfiles && load-vagrant-images
-                      $(cd /home/nixuser/vagrant-examples/alpine && vagrant up)
-                      $(cd /home/nixuser/vagrant-examples/ubuntu && vagrant up)
+                      copy-vagrantfiles && load-vagrant-images \
+                      && echo
+
+                      cd /home/nixuser/vagrant-examples/alpine \
+                      && vagrant up \
+                      && cd /home/nixuser/vagrant-examples/ubuntu \
+                      && vagrant up
+
+                      echo
+                      vagrant global-status
                     ''
                   )
 
