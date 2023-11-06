@@ -260,8 +260,7 @@
                         Vagrant.configure("2") do |config|
                           # Every Vagrant development environment requires a box. You can search for
                           # boxes at https://vagrantcloud.com/search.
-                          # config.vm.box = "generic/ubuntu2204"
-                          config.vm.box = "alvistack/ubuntu2310"
+                          config.vm.box = "generic/ubuntu2204"
 
                           config.vm.provider :libvirt do |v|
                             v.cpus=8
