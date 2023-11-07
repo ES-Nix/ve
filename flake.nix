@@ -277,11 +277,9 @@
                             df -h /tmp && sudo mount -o remount,size=2G /tmp/ && df -h /tmp
                             echo
 
-                            echo 'vagrant:123' | chpasswd
-
-                            mkdir -pv /etc/sudoers.d \
-                            && echo 'vagrant:123' | chpasswd \
-                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+                            # mkdir -pv /etc/sudoers.d \
+                            # && echo 'vagrant:123' | chpasswd \
+                            # && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
 
 
                             su vagrant -lc \
