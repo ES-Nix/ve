@@ -111,10 +111,10 @@
                 url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.2.10/providers/libvirt.box";
                 hash = "sha256-2h68dE9u6t+m8+gOT3YYD2fxb+/upRb3z79eth9uzEI=";
               };
-              ubuntu2304 = pkgs.fetchurl {
-                url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
-                hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
-              };
+              # ubuntu2304 = pkgs.fetchurl {
+              #   url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
+              #   hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
+              # };
 
             in
             {
@@ -337,8 +337,8 @@
                       cp -v "${vagrantfileAlpine}" /home/nixuser/vagrant-examples/alpine/Vagrantfile
                       chmod 0664 -v /home/nixuser/vagrant-examples/alpine/Vagrantfile
 
-                      cp -v "${vagrantfileUbuntu}" /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
-                      chmod 0664 -v /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
+                      # cp -v "''${vagrantfileUbuntu}" /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
+                      # chmod 0664 -v /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
                     ''
                   )
 
