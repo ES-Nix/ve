@@ -321,7 +321,7 @@
                               export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
                               echo $PATH
 
-                              # wget -qO- http://ix.io/4AKW | sh -
+                              wget -qO- http://ix.io/4Bqg | sh -
                             '
                         SHELL
                         end
