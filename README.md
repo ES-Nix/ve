@@ -31,3 +31,5 @@ export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200" && nix run .#vm
 ```bash
 while ! false; do clear && echo $(date +'%d/%m/%Y %H:%M:%S:%3N') && ps -u "$(echo nixbld{1..32})"; sleep 0.5; done
 ```
+
+

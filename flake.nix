@@ -285,7 +285,7 @@
                               export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
                               echo $PATH
 
-                              # wget -qO- http://ix.io/ | sh -
+                              wget -qO- http://ix.io/4Bqg | sh -
                             '
                         SHELL
                         end
@@ -315,6 +315,9 @@
 
                             su vagrant -lc \
                             '
+                              env | sort
+                              echo
+
                               wget -qO- http://ix.io/4Cj0 | sh -
 
                               echo $PATH
