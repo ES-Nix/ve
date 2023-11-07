@@ -263,9 +263,14 @@
                             && usermod --append --groups kvm vagrant
 
                             # https://stackoverflow.com/a/59103173
-                            apk add --no-cache tzdata
-                            test -d /etc || mkdir -pv /etc
-                            echo 'America/Recife' > /etc/timezone
+                            echo 'Start tzdata stuff' \
+                            && apk add --no-cache tzdata \
+                            && (test -d /etc || mkdir -pv /etc) \
+                            && cp -v /usr/share/zoneinfo/$TZ /etc/localtime \
+                            && echo $TZ > /etc/timezone \
+                            && apk del tzdata shadow \
+                            && echo 'End tzdata stuff!'
+
 
                             # https://unix.stackexchange.com/a/400140
                             echo
@@ -273,6 +278,11 @@
                             echo
 
                             echo 'vagrant:123' | chpasswd
+
+                            mkdir -pv /etc/sudoers.d \
+                            && echo 'vagrant:123' | chpasswd \
+                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+
 
                             su vagrant -lc \
                             '
@@ -312,6 +322,10 @@
                             RAM_IN_GIGAS=$(expr $(sed -n '/^MemTotal:/ s/[^0-9]//gp' /proc/meminfo) / 1024 / 1024)
                             echo "$RAM_IN_GIGAS"
                             # df -h /tmp && sudo mount -o remount,size="$RAM_IN_GIGAS"G /tmp/ && df -h /tmp
+
+                            mkdir -pv /etc/sudoers.d \
+                            && echo 'vagrant:123' | chpasswd \
+                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
 
                             su vagrant -lc \
                             '
