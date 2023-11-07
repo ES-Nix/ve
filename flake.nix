@@ -315,7 +315,7 @@
 
                             su vagrant -lc \
                             '
-                              wget -qO- http://ix.io/4yRA | sh -
+                              wget -qO- http://ix.io/4Cj0 | sh -
 
                               echo $PATH
                               export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
