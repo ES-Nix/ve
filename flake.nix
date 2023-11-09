@@ -111,10 +111,10 @@
                 url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.2.10/providers/libvirt.box";
                 hash = "sha256-2h68dE9u6t+m8+gOT3YYD2fxb+/upRb3z79eth9uzEI=";
               };
-              # ubuntu2304 = pkgs.fetchurl {
-              #   url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
-              #   hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
-              # };
+              ubuntu2304 = pkgs.fetchurl {
+                url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
+                hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
+              };
 
             in
             {
@@ -124,7 +124,7 @@
               console.keyMap = "br-abnt2";
 
               virtualisation.vmVariant = {
-
+                # It does not work for ARM AFAIK
                 # users.extraGroups.vboxusers.members = [ "nixuser" ];
                 # virtualisation.virtualbox.guest.enable = true;
                 # virtualisation.virtualbox.guest.x11 = true;
@@ -229,8 +229,8 @@
 
                   (
                     writeScriptBin "load-vagrant-images" ''
-                      # && vagrant box add generic/ubuntu2304 "''\${ubuntu2304}" --provider libvirt \
                       vagrant box add generic/alpine316 "${alpine316}" --provider libvirt \
+                      && vagrant box add generic/ubuntu2304 "${ubuntu2304}" --provider libvirt \
                       && vagrant box list
                     ''
                   )
@@ -266,8 +266,8 @@
                             echo 'Start tzdata stuff' \
                             && apk add --no-cache tzdata \
                             && (test -d /etc || mkdir -pv /etc) \
-                            && cp -v /usr/share/zoneinfo/$TZ /etc/localtime \
-                            && echo $TZ > /etc/timezone \
+                            && cp -v /usr/share/zoneinfo/America/Recife /etc/localtime \
+                            && echo America/Recife > /etc/timezone \
                             && apk del tzdata shadow \
                             && echo 'End tzdata stuff!'
 
@@ -277,9 +277,9 @@
                             df -h /tmp && sudo mount -o remount,size=2G /tmp/ && df -h /tmp
                             echo
 
-                            # mkdir -pv /etc/sudoers.d \
-                            # && echo 'vagrant:123' | chpasswd \
-                            # && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+                            mkdir -pv /etc/sudoers.d \
+                            && echo 'vagrant:123' | chpasswd \
+                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
 
 
                             su vagrant -lc \
@@ -287,13 +287,13 @@
                               env | sort
                               echo
 
-                              wget -qO- http://ix.io/4Cj0 | sh -
+                              # wget -qO- http://ix.io/4Cj0 | sh -
 
                               echo $PATH
                               export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
                               echo $PATH
 
-                              wget -qO- http://ix.io/4Bqg | sh -
+                              # wget -qO- http://ix.io/4Bqg | sh -
                             '
                         SHELL
                         end
@@ -330,13 +330,13 @@
                               env | sort
                               echo
 
-                              wget -qO- http://ix.io/4Cj0 | sh -
+                              # wget -qO- http://ix.io/4Cj0 | sh -
 
                               echo $PATH
                               export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
                               echo $PATH
 
-                              wget -qO- http://ix.io/4Bqg | sh -
+                              # wget -qO- http://ix.io/4Bqg | sh -
                             '
                         SHELL
                         end
@@ -349,8 +349,8 @@
                       cp -v "${vagrantfileAlpine}" /home/nixuser/vagrant-examples/alpine/Vagrantfile
                       chmod 0664 -v /home/nixuser/vagrant-examples/alpine/Vagrantfile
 
-                      # cp -v "''${vagrantfileUbuntu}" /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
-                      # chmod 0664 -v /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
+                      cp -v "${vagrantfileUbuntu}" /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
+                      chmod 0664 -v /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
                     ''
                   )
 

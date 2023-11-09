@@ -13,7 +13,7 @@ nix run --impure --refresh github:ES-Nix/ve#vm
 
 ```bash
 du -hs nixos.qcow2 \
-&& rm -frv nixos.qcow2
+&& rm -fv nixos.qcow2
 
 df -h / \
 && nix run --impure --refresh github:ES-Nix/ve#vm
