@@ -18,7 +18,18 @@
     flake-utils.lib.eachSystem suportedSystems
       (suportedSystem:
         let
-          pkgsAllowUnfree = import nixpkgs { system = suportedSystem; config = { allowUnfree = true; }; };
+          pkgsAllowUnfree = import nixpkgs {
+            system = suportedSystem;
+            config = {
+              allowUnfree = true;
+              # Broken
+              overlays = [
+                (final: prev: {
+                  sl = final.hello;
+                })
+              ];
+            };
+          };
 
         in
         {
@@ -39,40 +50,10 @@
               file
               nixpkgs-fmt
               which
+              sl
 
-              docker
-              podman
-
-              # Graphical packages
-              # anydesk
-              # blender
-              # brave
-              # dbeaver
-              # discord
-              # ghidra
-              # gimp
-              # google-chrome
-              # inkscape
-              # insomnia
-              # kolourpaint
-              # libreoffice
-              # rustdesk
-              gitkraken
-              jetbrains.pycharm-community
-              keepassxc
-              obsidian
-              okular
-              peek
-              postman
-              qbittorrent
-              slack
-              spotify
-              tdesktop
-              virt-manager
-              vlc
-              vscodium
-              xorg.xclock
-              yt-dlp
+              # docker
+              # podman
             ];
 
             shellHook = ''
@@ -119,12 +100,12 @@
             in
             {
               # Internationalisation options
-              # i18n.defaultLocale = "en_US.UTF-8";
-              i18n.defaultLocale = "pt_BR.UTF-8";
+              i18n.defaultLocale = "en_US.UTF-8";
+              # i18n.defaultLocale = "pt_BR.UTF-8";
               console.keyMap = "br-abnt2";
 
               virtualisation.vmVariant = {
-                # It does not work for ARM AFAIK
+                # It does not work for ARM tested it too
                 # users.extraGroups.vboxusers.members = [ "nixuser" ];
                 # virtualisation.virtualbox.guest.enable = true;
                 # virtualisation.virtualbox.guest.x11 = true;
@@ -135,7 +116,7 @@
                 virtualisation.writableStore = true; # TODO: hardening
 
                 virtualisation.docker.enable = true;
-                virtualisation.podman.enable = true;
+                virtualisation.podman.enable = false; # Enabling k8s breaks podman
 
                 virtualisation.libvirtd.enable = true;
 
@@ -211,14 +192,53 @@
                 group = "nixgroup";
                 extraGroups = [
                   "docker"
+                  "kubernetes"
                   "kvm"
                   "libvirtd"
+                  "nixgroup"
                   "podman"
                   "qemu-libvirtd"
+                  "root"
                   "wheel"
                 ];
                 packages = with pkgs; [
+
+                  # Graphical packages
+                  # anydesk
+                  # blender
+                  # brave
+                  # dbeaver
+                  # discord
+                  # ghidra
+                  # gimp
+                  # google-chrome
+                  # inkscape
+                  # insomnia
+                  # kolourpaint
+                  # libreoffice
+                  # rustdesk
+
+                  # gitkraken
+                  # jetbrains.pycharm-community
+                  # keepassxc
+                  # obsidian
+                  # okular
+                  # peek
+                  # postman
+                  # qbittorrent
+                  # slack
+                  # spotify
+                  # tdesktop
+                  # virt-manager
+                  # vlc
+                  # vscodium
+                  # xorg.xclock
+                  # yt-dlp
+
                   btop
+                  git
+                  tilix
+                  starship
                   coreutils
                   direnv
                   file
@@ -226,11 +246,13 @@
                   openssh
                   virt-manager
                   which
+                  awscli
+                  sl
 
                   (
                     writeScriptBin "load-vagrant-images" ''
-                      vagrant box add generic/alpine316 "${alpine316}" --provider libvirt \
-                      && vagrant box add generic/ubuntu2304 "${ubuntu2304}" --provider libvirt \
+                      vagrant box add generic/alpine316 "${alpine316}" --force --provider libvirt \
+                      && vagrant box add generic/ubuntu2304 "${ubuntu2304}" --force --provider libvirt \
                       && vagrant box list
                     ''
                   )
@@ -370,8 +392,17 @@
                     ''
                   )
 
+                  (
+                    writeScriptBin "fix-k8s-cluster-admin-key" ''
+                      #! ${pkgs.runtimeShell} -e
+                      sudo chmod 0660 -v /var/lib/kubernetes/secrets/cluster-admin-key.pem
+                      sudo chown root:kubernetes -v /var/lib/kubernetes/secrets/cluster-admin-key.pem
+                    ''
+                  )
+
                 ];
-                shell = pkgs.bashInteractive;
+                # shell = pkgs.bashInteractive;
+                shell = pkgs.zsh;
                 uid = 1234;
                 autoSubUidGidRange = true;
 
@@ -384,6 +415,95 @@
                   "${toString nixuserKeys}"
                   "${toString pedroKeys}"
                 ];
+              };
+
+              # https://github.com/NixOS/nixpkgs/blob/3a44e0112836b777b176870bb44155a2c1dbc226/nixos/modules/programs/zsh/oh-my-zsh.nix#L119
+              # https://discourse.nixos.org/t/nix-completions-for-zsh/5532
+              # https://github.com/NixOS/nixpkgs/blob/09aa1b23bb5f04dfc0ac306a379a464584fc8de7/nixos/modules/programs/zsh/zsh.nix#L230-L231
+              programs.zsh = {
+                enable = true;
+                shellAliases = {
+                  vim = "nvim";
+                  shebang = "echo '#!/usr/bin/env bash'"; # https://stackoverflow.com/questions/10376206/what-is-the-preferred-bash-shebang#comment72209991_10383546
+                  nfmt = "nix run nixpkgs#nixpkgs-fmt **/*.nix *.nix";
+                };
+                enableCompletion = true;
+                autosuggestions.enable = true;
+                syntaxHighlighting.enable = true;
+                interactiveShellInit = ''
+                  export ZSH=${pkgs.oh-my-zsh}/share/oh-my-zsh
+                  export ZSH_THEME="agnoster"
+                  export ZSH_CUSTOM=${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions
+                  plugins=(
+                            colored-man-pages
+                            docker
+                            git
+                            #zsh-autosuggestions # Why this causes an warn?
+                            #zsh-syntax-highlighting
+                          )
+
+                  # https://nixos.wiki/wiki/Fzf
+                  source $ZSH/oh-my-zsh.sh
+                  eval "$(direnv hook zsh)"
+                  eval "$(starship init zsh)"
+
+                  export FZF_BASE=$(fzf-share)
+                  source "$(fzf-share)/completion.zsh"
+                  source "$(fzf-share)/key-bindings.zsh"
+                '';
+
+                ohMyZsh.custom = "${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions";
+                promptInit = "";
+              };
+
+              # Probably solve many warns about fonts
+              # https://gist.github.com/kendricktan/8c33019cf5786d666d0ad64c6a412526
+              # https://discourse.nixos.org/t/imagemagicks-convert-command-fails-due-to-fontconfig-error/20518/5
+              # https://github.com/NixOS/nixpkgs/issues/176081#issuecomment-1145825623
+              fonts = {
+                fontDir.enable = true;
+                fonts = with pkgs; [
+                  # fontconfig
+
+                  powerline
+                  powerline-fonts
+                  # noto-fonts-cjk
+                  # noto-fonts-emoji
+                  # liberation_ttf
+                  # fira-code
+                  # fira-code-symbols
+                  # mplus-outline-fonts.githubRelease
+                  # dina-font
+                  # proggyfonts
+                ];
+                enableDefaultFonts = true;
+                enableGhostscriptFonts = true;
+              };
+
+              # Hack to fix annoying zsh warning, too overkill probably
+              # https://www.reddit.com/r/NixOS/comments/cg102t/how_to_run_a_shell_command_upon_startup/eudvtz1/?utm_source=reddit&utm_medium=web2x&context=3
+              systemd.services.fix-zsh-warning = {
+                script = ''
+                  echo "Fixing a zsh warning"
+                  # https://stackoverflow.com/questions/638975/how-wdo-i-tell-if-a-regular-file-does-not-exist-in-bash#comment25226870_638985
+                  test -f /home/nixuser/.zshrc || touch /home/nixuser/.zshrc && chown nixuser: -Rv /home/nixuser
+                '';
+                wantedBy = [ "multi-user.target" ];
+              };
+
+              # journalctl -u fix-k8s.service -b
+              systemd.services.fix-k8s = {
+                script = ''
+                  echo "Fixing k8s"
+
+                  CLUSTER_ADMIN_KEY_PATH=/var/lib/kubernetes/secrets/cluster-admin-key.pem
+
+                  while ! test -f "$CLUSTER_ADMIN_KEY_PATH"; do echo $(date +'%d/%m/%Y %H:%M:%S:%3N'); sleep 0.5; done
+
+                  chmod 0660 -v "$CLUSTER_ADMIN_KEY_PATH"
+                  chown root:kubernetes -v "$CLUSTER_ADMIN_KEY_PATH"
+                '';
+                wantedBy = [ "multi-user.target" ];
               };
 
               # Enable ssh
@@ -407,7 +527,6 @@
               # https://nixos.wiki/wiki/Libvirt
               # https://discourse.nixos.org/t/set-up-vagrant-with-libvirt-qemu-kvm-on-nixos/14653
               boot.extraModprobeConfig = "options kvm_intel nested=1";
-
 
               # https://www.reddit.com/r/NixOS/comments/wcxved/i_gave_an_adhoc_lightning_talk_at_mch2022/
               # Matthew Croughan - Use flake.nix, not Dockerfile - MCH2022
@@ -451,9 +570,130 @@
                 openssh
                 virt-manager
                 # gnome3.dconf-editor
+                # gnome2.dconf-editor
 
                 vagrant
-                direnv # misses the config
+                direnv
+                nix-direnv
+                fzf
+                neovim
+                oh-my-zsh
+                zsh
+                zsh-autosuggestions
+                zsh-completions
+
+                # Looks like kubernetes needs atleast all this
+                kubectl
+                kubernetes
+                #
+                cni
+                cni-plugins
+                conntrack-tools
+                cri-o
+                cri-tools
+                # docker
+                ebtables
+                ethtool
+                flannel
+                iptables
+                socat
+
+                (
+                  writeScriptBin "fix-k8s-cluster-admin-key" ''
+                    #! ${pkgs.runtimeShell} -e
+                    sudo chmod 0660 -v /var/lib/kubernetes/secrets/cluster-admin-key.pem
+                    sudo chown root:kubernetes -v /var/lib/kubernetes/secrets/cluster-admin-key.pem
+                  ''
+                )
+              ];
+
+              # Is this ok to kubernetes?
+              # Why free -h still show swap stuff but with 0?
+              swapDevices = pkgs.lib.mkForce [ ];
+
+              # Is it a must for k8s?
+              # Take a look into:
+              # https://github.com/NixOS/nixpkgs/blob/9559834db0df7bb274062121cf5696b46e31bc8c/nixos/modules/services/cluster/kubernetes/kubelet.nix#L255-L259
+              boot.kernel.sysctl = {
+                # If it is enabled it conflicts with what kubelet is doing
+                # "net.bridge.bridge-nf-call-ip6tables" = 1;
+                # "net.bridge.bridge-nf-call-iptables" = 1;
+
+                # https://docs.projectcalico.org/v3.9/getting-started/kubernetes/installation/migration-from-flannel
+                # https://access.redhat.com/solutions/53031
+                "net.ipv4.conf.all.rp_filter" = 1;
+                # https://www.tenable.com/audits/items/CIS_Debian_Linux_8_Server_v2.0.2_L1.audit:bb0f399418f537997c2b44741f2cd634
+                # "net.ipv4.conf.default.rp_filter" = 1;
+                "vm.swappiness" = 0;
+              };
+
+              environment.variables.KUBECONFIG = "/etc/kubernetes/cluster-admin.kubeconfig";
+
+              #  environment.etc."containers/registries.conf" = {
+              #    mode = "0644";
+              #    text = ''
+              #      [registries.search]
+              #      registries = ['docker.io', 'localhost']
+              #    '';
+              #  };
+
+              services.kubernetes.roles = [ "master" "node" ];
+              services.kubernetes.masterAddress = "nixos";
+              services.kubernetes = {
+                flannel.enable = true;
+              };
+
+              environment.etc."kubernets/kubernetes-examples/appvia/deployment.yaml" = {
+                mode = "0644";
+                text = "${builtins.readFile ./kubernetes-examples/appvia/deployment.yaml}";
+              };
+
+              environment.etc."kubernets/kubernetes-examples/appvia/service.yaml" = {
+                mode = "0644";
+                text = "${builtins.readFile ./kubernetes-examples/appvia/service.yaml}";
+              };
+
+              environment.etc."kubernets/kubernetes-examples/appvia/ingress.yaml" = {
+                mode = "0644";
+                text = "${builtins.readFile ./kubernetes-examples/appvia/ingress.yaml}";
+              };
+
+              environment.etc."kubernets/kubernetes-examples/appvia/notes.md" = {
+                mode = "0644";
+                text = "${builtins.readFile ./kubernetes-examples/appvia/notes.md}";
+              };
+
+              # journalctl -u move-kubernetes-examples.service -b
+              systemd.services.move-kubernetes-examples = {
+                script = ''
+                  echo "Started move-kubernets-examples"
+
+                  # cp -rv ''\${./kubernetes-examples} /home/nixuser/
+                  cp -Rv /etc/kubernets/kubernetes-examples/ /home/nixuser/
+
+                  chown -Rv nixuser:nixgroup /home/nixuser/kubernetes-examples
+                '';
+                wantedBy = [ "multi-user.target" ];
+              };
+
+              boot.kernelParams = [
+                "swapaccount=0"
+                "systemd.unified_cgroup_hierarchy=0"
+                "group_enable=memory"
+                "cgroup_enable=cpuset"
+                "cgroup_memory=1"
+                "cgroup_enable=memory"
+              ];
+
+              # ulimit -n
+              # https://github.com/NixOS/nixpkgs/issues/159964#issuecomment-1050080111
+              security.pam.loginLimits = [
+                {
+                  domain = "*";
+                  type = "-";
+                  item = "nofile";
+                  value = "9192";
+                }
               ];
 
               system.stateVersion = "22.11";
