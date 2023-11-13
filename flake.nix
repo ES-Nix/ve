@@ -299,11 +299,6 @@
                             df -h /tmp && sudo mount -o remount,size=2G /tmp/ && df -h /tmp
                             echo
 
-                            mkdir -pv /etc/sudoers.d \
-                            && echo 'vagrant:123' | chpasswd \
-                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
-
-
                             su vagrant -lc \
                             '
                               env | sort
@@ -317,6 +312,11 @@
 
                               # wget -qO- http://ix.io/4Bqg | sh -
                             '
+
+                            mkdir -pv /etc/sudoers.d \
+                            && echo 'vagrant:123' | chpasswd \
+                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+
                         SHELL
                         end
                       '';
@@ -343,16 +343,12 @@
                             echo "$RAM_IN_GIGAS"
                             # df -h /tmp && sudo mount -o remount,size="$RAM_IN_GIGAS"G /tmp/ && df -h /tmp
 
-                            mkdir -pv /etc/sudoers.d \
-                            && echo 'vagrant:123' | chpasswd \
-                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
-
                             su vagrant -lc \
                             '
                               env | sort
                               echo
 
-                              # wget -qO- http://ix.io/4Cj0 | sh -
+                              wget -qO- http://ix.io/4Cj0 | sh -
 
                               echo $PATH
                               export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
@@ -360,6 +356,11 @@
 
                               # wget -qO- http://ix.io/4Bqg | sh -
                             '
+
+                            mkdir -pv /etc/sudoers.d \
+                            && echo 'vagrant:123' | chpasswd \
+                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+
                         SHELL
                         end
                       '';
