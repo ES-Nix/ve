@@ -30,10 +30,12 @@
               ];
             };
           };
-
+          # https://gist.github.com/tpwrules/34db43e0e2e9d0b72d30534ad2cda66d#file-flake-nix-L28
+          pleaseKeepMyInputs = pkgsAllowUnfree.writeTextDir "bin/.please-keep-my-inputs"
+            (builtins.concatStringsSep " " (builtins.attrValues allAttrs));
         in
         {
-          # packages.vm = self.nixosConfigurations."${suportedSystem}".vm.config.system.build.toplevel;
+          packages.vm = self.nixosConfigurations.vm.config.system.build.toplevel;
 
           formatter = pkgsAllowUnfree.nixpkgs-fmt;
 
@@ -54,13 +56,25 @@
 
               # docker
               # podman
+              pleaseKeepMyInputs
             ];
 
             shellHook = ''
-              export TMPDIR=/tmp
+                export TMPDIR=/tmp
 
-              # Too much hardcoded?
-              export DOCKER_HOST=ssh://nixuser@localhost:2200
+                # Too much hardcoded?
+                export DOCKER_HOST=ssh://nixuser@localhost:2200
+
+                test -d .profiles || mkdir -v .profiles
+
+                test -L .profiles/dev \
+                || nix develop .# --profile .profiles/dev --command true
+
+                test -L .profiles/dev-shell-default \
+                || nix build $(nix eval --impure --raw .#devShells."$system".default.drvPath) --out-link .profiles/dev-shell-"$system"-default
+
+                test -L .profiles/nixosConfigurations."$system".vm.config.system.build.vm \
+                || nix build --impure --out-link .profiles/nixosConfigurations."$system".vm.config.system.build.vm .#nixosConfigurations.vm.config.system.build.vm
             '';
           };
         }
@@ -88,14 +102,14 @@
               nixuserKeys = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExR+PSB/jBwJYKfpLN+MMXs3miRn70oELTV3sXdgzpr";
               pedroKeys = "ssh-ed25519 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPOK55vtFrqxd5idNzCd2nhr5K3ocoyw1JKWSM1E7f9i pedroalencarregis@hotmail.com";
 
-              #  alpine316 = pkgs.fetchurl {
-              #    url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.2.10/providers/libvirt.box";
-              #    hash = "sha256-2h68dE9u6t+m8+gOT3YYD2fxb+/upRb3z79eth9uzEI=";
-              #  };
-              #  ubuntu2304 = pkgs.fetchurl {
-              #    url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
-              #    hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
-              #  };
+              alpine316 = pkgs.fetchurl {
+                url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.2.10/providers/libvirt.box";
+                hash = "sha256-2h68dE9u6t+m8+gOT3YYD2fxb+/upRb3z79eth9uzEI=";
+              };
+              ubuntu2304 = pkgs.fetchurl {
+                url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
+                hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
+              };
 
             in
             {
@@ -103,6 +117,13 @@
               i18n.defaultLocale = "en_US.UTF-8";
               # i18n.defaultLocale = "pt_BR.UTF-8";
               console.keyMap = "br-abnt2";
+
+              # Why
+              # nix flake show --impure .#
+              # break if it does not exists?
+              # Use systemd boot (EFI only)
+              boot.loader.systemd-boot.enable = true;
+              fileSystems."/" = { device = "/dev/hda1"; };
 
               virtualisation.vmVariant = {
                 # It does not work for ARM tested it too
@@ -136,9 +157,9 @@
 
                 };
 
-                virtualisation.memorySize = 1024 * 8; # Use MiB memory.
-                virtualisation.diskSize = 1024 * 16; # Use MiB memory.
-                virtualisation.cores = 8; # Number of cores.
+                virtualisation.memorySize = 1024 * 10; # Use MiB memory.
+                virtualisation.diskSize = 1024 * 25; # Use MiB memory.
+                virtualisation.cores = 10; # Number of cores.
                 virtualisation.graphics = true;
                 # virtualisation.forwardPorts = [
                 #   { from = "host"; host.port = 8888; guest.port = 80; }
@@ -251,8 +272,8 @@
 
                   (
                     writeScriptBin "load-vagrant-images" ''
-                      vagrant box add generic/alpine316 "''\${alpine316}" --force --provider libvirt \
-                      && vagrant box add generic/ubuntu2304 "''\${ubuntu2304}" --force --provider libvirt \
+                      vagrant box add generic/alpine316 "${alpine316}" --force --provider libvirt \
+                      && vagrant box add generic/ubuntu2304 "${ubuntu2304}" --force --provider libvirt \
                       && vagrant box list
                     ''
                   )
@@ -592,7 +613,6 @@
                 conntrack-tools
                 cri-o
                 cri-tools
-                # docker
                 ebtables
                 ethtool
                 flannel
