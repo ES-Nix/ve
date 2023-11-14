@@ -555,6 +555,7 @@
 
               # https://www.reddit.com/r/NixOS/comments/wcxved/i_gave_an_adhoc_lightning_talk_at_mch2022/
               # Matthew Croughan - Use flake.nix, not Dockerfile - MCH2022
+              # nixos-option boot.binfmt.emulatedSystems
               # boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
               services.qemuGuest.enable = true;
@@ -602,6 +603,7 @@
                 nix-direnv
                 fzf
                 neovim
+                nixos-option
                 oh-my-zsh
                 zsh
                 zsh-autosuggestions
