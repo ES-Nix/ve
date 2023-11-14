@@ -466,7 +466,10 @@
 
                   # https://nixos.wiki/wiki/Fzf
                   source $ZSH/oh-my-zsh.sh
+
+                  export DIRENV_LOG_FORMAT=""
                   eval "$(direnv hook zsh)"
+
                   eval "$(starship init zsh)"
 
                   export FZF_BASE=$(fzf-share)
