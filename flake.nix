@@ -693,6 +693,12 @@
                   cp -Rv /etc/kubernets/kubernetes-examples/ /home/nixuser/
 
                   chown -Rv nixuser:nixgroup /home/nixuser/kubernetes-examples
+
+                  kubectl \
+                    apply \
+                    --file /home/nixuser/kubernetes-examples/deployment.yaml \
+                    --file /home/nixuser/kubernetes-examples/service.yaml \
+                    --file /home/nixuser/kubernetes-examples/ingress.yaml
                 '';
                 wantedBy = [ "multi-user.target" ];
               };
