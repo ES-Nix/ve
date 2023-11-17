@@ -60,21 +60,21 @@
             ];
 
             shellHook = ''
-                export TMPDIR=/tmp
+              export TMPDIR=/tmp
 
-                # Too much hardcoded?
-                export DOCKER_HOST=ssh://nixuser@localhost:2200
+              # Too much hardcoded?
+              export DOCKER_HOST=ssh://nixuser@localhost:2200
 
-                test -d .profiles || mkdir -v .profiles
+              test -d .profiles || mkdir -v .profiles
 
-                test -L .profiles/dev \
-                || nix develop .# --profile .profiles/dev --command true
+              test -L .profiles/dev \
+              || nix develop .# --profile .profiles/dev --command true
 
-                test -L .profiles/dev-shell-default \
-                || nix build $(nix eval --impure --raw .#devShells."$system".default.drvPath) --out-link .profiles/dev-shell-"$system"-default
+              test -L .profiles/dev-shell-default \
+              || nix build $(nix eval --impure --raw .#devShells."$system".default.drvPath) --out-link .profiles/dev-shell-"$system"-default
 
-                test -L .profiles/nixosConfigurations."$system".vm.config.system.build.vm \
-                || nix build --impure --out-link .profiles/nixosConfigurations."$system".vm.config.system.build.vm .#nixosConfigurations.vm.config.system.build.vm
+              test -L .profiles/nixosConfigurations."$system".vm.config.system.build.vm \
+              || nix build --impure --out-link .profiles/nixosConfigurations."$system".vm.config.system.build.vm .#nixosConfigurations.vm.config.system.build.vm
             '';
           };
         }
@@ -106,6 +106,17 @@
                 url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.2.10/providers/libvirt.box";
                 hash = "sha256-2h68dE9u6t+m8+gOT3YYD2fxb+/upRb3z79eth9uzEI=";
               };
+
+              archlinux = pkgs.fetchurl {
+                url = "https://app.vagrantup.com/archlinux/boxes/archlinux/versions/20231015.185166/providers/libvirt.box";
+                hash = "sha256-al0x2BVLB9XoOBu3Z0/ANg2Ut1Bik9uT6xYz8DDc7L8=";
+              };
+
+              ubuntu2204 = pkgs.fetchurl {
+                url = "https://app.vagrantup.com/generic/boxes/ubuntu2204/versions/4.2.10/providers/libvirt.box";
+                hash = "sha256-vSjwtLxUa7U3Mb1Ech36iGeR/ldV75JLJPv5eSthEZc=";
+              };
+
               ubuntu2304 = pkgs.fetchurl {
                 url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
                 hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
@@ -158,8 +169,8 @@
                 };
 
                 virtualisation.memorySize = 1024 * 10; # Use MiB memory.
-                virtualisation.diskSize = 1024 * 25; # Use MiB memory.
-                virtualisation.cores = 10; # Number of cores.
+                virtualisation.diskSize = 1024 * 50; # Use MiB memory.
+                virtualisation.cores = 8; # Number of cores.
                 virtualisation.graphics = true;
                 # virtualisation.forwardPorts = [
                 #   { from = "host"; host.port = 8888; guest.port = 80; }
@@ -272,19 +283,17 @@
 
                   (
                     writeScriptBin "load-vagrant-images" ''
-                      vagrant box add generic/alpine316 "${alpine316}" --force --provider libvirt \
-                      && vagrant box add generic/ubuntu2304 "${ubuntu2304}" --force --provider libvirt \
-                      && vagrant box list
+                      vagrant box add generic/alpine316 "${alpine316}" --force --provider libvirt
+                      vagrant box add generic/ubuntu2204 "${ubuntu2204}" --force --provider libvirt
+                      vagrant box add generic/ubuntu2304 "${ubuntu2304}" --force --provider libvirt
+                      # vagrant box add archlinux/archlinux "''\${archlinux}" --force --provider libvirt
+                      vagrant box list
                     ''
                   )
 
                   (
                     let
                       vagrantfileAlpine = pkgs.writeText "vagrantfile-alpine" ''
-                        # All Vagrant configuration is done below. The "2" in Vagrant.configure
-                        # configures the configuration version (we support older styles for
-                        # backwards compatibility). Please don't change it unless you know what
-                        # you're doing.
                         Vagrant.configure("2") do |config|
                           # Every Vagrant development environment requires a box. You can search for
                           # boxes at https://vagrantcloud.com/search.
@@ -337,15 +346,45 @@
                             mkdir -pv /etc/sudoers.d \
                             && echo 'vagrant:123' | chpasswd \
                             && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+                          SHELL
+                        end
+                      '';
 
-                        SHELL
+                      vagrantfileArchlinux = pkgs.writeText "vagrantfile-alpine" ''
+                        Vagrant.configure("2") do |config|
+                          config.vm.box = "archlinux/archlinux"
+
+                          config.vm.provider :libvirt do |v|
+                            v.cpus=8
+                            v.memory = "3072"
+                          end
+
+                          config.vm.synced_folder '.', '/home/vagrant/code'
+
+                          config.vm.provision "shell", inline: <<-SHELL
+                            su vagrant -lc \
+                            '
+                              env | sort
+                              echo
+
+                              # curl -L http://ix.io/4Cj0 | sh -
+
+                              echo $PATH
+                              export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
+                              echo $PATH
+
+                              # wget -qO- http://ix.io/4Bqg | sh -
+                            '
+
+                            mkdir -pv /etc/sudoers.d \
+                            && echo 'vagrant:123' | chpasswd \
+                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+                          SHELL
                         end
                       '';
 
                       vagrantfileUbuntu = pkgs.writeText "vagrantfile-alpine" ''
                         Vagrant.configure("2") do |config|
-                          # Every Vagrant development environment requires a box. You can search for
-                          # boxes at https://vagrantcloud.com/search.
                           config.vm.box = "generic/ubuntu2304"
 
                           config.vm.provider :libvirt do |v|
@@ -369,7 +408,7 @@
                               env | sort
                               echo
 
-                              wget -qO- http://ix.io/4Cj0 | sh -
+                              # wget -qO- http://ix.io/4Cj0 | sh -
 
                               echo $PATH
                               export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
@@ -382,16 +421,19 @@
                             && echo 'vagrant:123' | chpasswd \
                             && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
 
-                        SHELL
+                          SHELL
                         end
                       '';
 
                     in
                     writeScriptBin "copy-vagrantfiles" ''
-                      mkdir -pv /home/nixuser/vagrant-examples/{alpine,ubuntu}
+                      mkdir -pv /home/nixuser/vagrant-examples/{alpine,archlinux,ubuntu}
 
                       cp -v "${vagrantfileAlpine}" /home/nixuser/vagrant-examples/alpine/Vagrantfile
                       chmod 0664 -v /home/nixuser/vagrant-examples/alpine/Vagrantfile
+
+                      cp -v "${vagrantfileArchlinux}" /home/nixuser/vagrant-examples/archlinux/Vagrantfile
+                      chmod 0664 -v /home/nixuser/vagrant-examples/archlinux/Vagrantfile
 
                       cp -v "${vagrantfileUbuntu}" /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
                       chmod 0664 -v /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
@@ -400,7 +442,8 @@
 
                   (
                     writeScriptBin "prepare-vagrant" ''
-                      copy-vagrantfiles && load-vagrant-images \
+                      copy-vagrantfiles \
+                      && load-vagrant-images \
                       && echo
 
                       # cd /home/nixuser/vagrant-examples/alpine \
@@ -585,6 +628,19 @@
                 package = pkgs.nixVersions.nix_2_10;
                 readOnlyStore = true;
                 registry.nixpkgs.flake = nixpkgs; # https://bou.ke/blog/nix-tips/
+                /*
+                  echo $NIX_PATH
+                  nixpkgs=/nix/store/mzdg05xhylnw743qapcd80c10f0vfbnl-059pc9vdgzwgd0xsm2i8hsysxlxs2al7-source
+
+                  nix eval --raw nixpkgs#pkgs.path
+                  /nix/store/375da3gc24ijmjz622h0wdsqnzvkajbh-b1l1kkp1g07gy67wglfpwlwaxs1rqkpx-source
+                */
+                # nixPath = ["nixpkgs=${pkgs.path}"]; # TODO: test it
+                nixPath = [
+                  "nixpkgs=/etc/channels/nixpkgs"
+                  "nixos-config=/etc/nixos/configuration.nix"
+                  # "/nix/var/nix/profiles/per-user/root/channels"
+                ];
               };
 
               environment.etc."channels/nixpkgs".source = nixpkgs.outPath;
