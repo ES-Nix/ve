@@ -160,7 +160,7 @@
 
                   # programs.dconf.enable = true;
                   # VIRSH_DEFAULT_CONNECT_URI="qemu:///system";
-                  VIRSH_DEFAULT_CONNECT_URI = "qemu:///session";
+                  # VIRSH_DEFAULT_CONNECT_URI = "qemu:///session";
                   # programs.dconf.profiles = pkgs.writeText "org/virt-manager/virt-manager/connections" ''
                   #  autoconnect = ["qemu:///system"];
                   #  uris = ["qemu:///system"];
@@ -283,10 +283,11 @@
 
                   (
                     writeScriptBin "load-vagrant-images" ''
-                      vagrant box add generic/alpine316 "${alpine316}" --force --provider libvirt
-                      vagrant box add generic/ubuntu2204 "${ubuntu2204}" --force --provider libvirt
-                      vagrant box add generic/ubuntu2304 "${ubuntu2304}" --force --provider libvirt
-                      # vagrant box add archlinux/archlinux "''\${archlinux}" --force --provider libvirt
+                      PROVIDER=libvirt
+                      vagrant box add generic/alpine316 "${alpine316}" --force --provider $PROVIDER
+                      vagrant box add generic/ubuntu2204 "${ubuntu2204}" --force --provider $PROVIDER
+                      vagrant box add generic/ubuntu2304 "${ubuntu2304}" --force --provider $PROVIDER
+                      # vagrant box add archlinux/archlinux "''\${archlinux}" --force --provider $PROVIDER
                       vagrant box list
                     ''
                   )
@@ -334,7 +335,7 @@
                               env | sort
                               echo
 
-                              # wget -qO- http://ix.io/4Cj0 | sh -
+                              wget -qO- http://ix.io/4Cj0 | sh -
 
                               echo $PATH
                               export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
@@ -408,7 +409,7 @@
                               env | sort
                               echo
 
-                              # wget -qO- http://ix.io/4Cj0 | sh -
+                              wget -qO- http://ix.io/4Cj0 | sh -
 
                               echo $PATH
                               export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
@@ -599,7 +600,7 @@
               # https://www.reddit.com/r/NixOS/comments/wcxved/i_gave_an_adhoc_lightning_talk_at_mch2022/
               # Matthew Croughan - Use flake.nix, not Dockerfile - MCH2022
               # nixos-option boot.binfmt.emulatedSystems
-              # boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+              boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
               services.qemuGuest.enable = true;
 
