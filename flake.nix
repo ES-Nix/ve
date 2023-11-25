@@ -102,22 +102,22 @@
               nixuserKeys = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExR+PSB/jBwJYKfpLN+MMXs3miRn70oELTV3sXdgzpr";
               pedroKeys = "ssh-ed25519 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPOK55vtFrqxd5idNzCd2nhr5K3ocoyw1JKWSM1E7f9i pedroalencarregis@hotmail.com";
 
-              alpine316 = pkgs.fetchurl {
+              alpine316w = pkgs.fetchurl {
                 url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.2.10/providers/libvirt.box";
                 hash = "sha256-2h68dE9u6t+m8+gOT3YYD2fxb+/upRb3z79eth9uzEI=";
               };
 
-              archlinux = pkgs.fetchurl {
+              archlinuxw = pkgs.fetchurl {
                 url = "https://app.vagrantup.com/archlinux/boxes/archlinux/versions/20231015.185166/providers/libvirt.box";
                 hash = "sha256-al0x2BVLB9XoOBu3Z0/ANg2Ut1Bik9uT6xYz8DDc7L8=";
               };
 
-              ubuntu2204 = pkgs.fetchurl {
+              ubuntu2204w = pkgs.fetchurl {
                 url = "https://app.vagrantup.com/generic/boxes/ubuntu2204/versions/4.2.10/providers/libvirt.box";
                 hash = "sha256-vSjwtLxUa7U3Mb1Ech36iGeR/ldV75JLJPv5eSthEZc=";
               };
 
-              ubuntu2304 = pkgs.fetchurl {
+              ubuntu2304w = pkgs.fetchurl {
                 url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
                 hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
               };
@@ -284,9 +284,9 @@
                   (
                     writeScriptBin "load-vagrant-images" ''
                       PROVIDER=libvirt
-                      vagrant box add generic/alpine316 "${alpine316}" --force --provider $PROVIDER
-                      vagrant box add generic/ubuntu2204 "${ubuntu2204}" --force --provider $PROVIDER
-                      vagrant box add generic/ubuntu2304 "${ubuntu2304}" --force --provider $PROVIDER
+                      vagrant box add generic/alpine316 "''\${alpine316}" --force --provider $PROVIDER
+                      vagrant box add generic/ubuntu2204 "''\${ubuntu2204}" --force --provider $PROVIDER
+                      vagrant box add generic/ubuntu2304 "''\${ubuntu2304}" --force --provider $PROVIDER
                       # vagrant box add archlinux/archlinux "''\${archlinux}" --force --provider $PROVIDER
                       vagrant box list
                     ''

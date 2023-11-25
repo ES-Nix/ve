@@ -116,7 +116,7 @@ RUN apk update \
  && echo 'End tzdata stuff!' 
 
 # sudo sh -c 'mkdir -pv /nix/var/nix && chmod -v 0777 /nix && chown -Rv '"$(id -nu)":"$(id -gn)"' /nix'
-RUN mkdir -pv /nix/var/nix && chmod -v 0777 /nix && chown -Rv nixuser:nixgroup /nix
+# RUN mkdir -pv /nix/var/nix && chmod -v 0777 /nix && chown -Rv nixuser:nixgroup /nix
 
 USER nixuser
 WORKDIR /home/nixuser
@@ -133,27 +133,30 @@ RUN CURL_OR_WGET_OR_ERROR=$($(curl -V &> /dev/null) && echo 'curl -L' && exit 0 
          registry \
          pin \
          nixpkgs github:NixOS/nixpkgs/98e7aaa5cfad782b8effe134bff3717280ec41ca \
+ && ./nix \
+         --extra-experimental-features nix-command \
+         --extra-experimental-features flakes \
+         --extra-experimental-features auto-allocate-uids \
+         profile \
+         install \
+         nixpkgs#pkgsStatic.nix \
+ && rm -v ./nix \
  && mkdir -pv "$HOME"/.config/nix \
  && grep 'experimental-features' "$HOME"/.config/nix/nix.conf -q || (echo 'experimental-features = nix-command flakes' >> "$HOME"/.config/nix/nix.conf) \
  && grep 'nix-profile' "$HOME"/.profile -q || (echo 'export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"' >> "$HOME"/.profile) \
  && . "$HOME"/.profile \
- && ./nix flake --version \
- && ./nix flake metadata nixpkgs \
- && ./nix build --impure --refresh github:ES-Nix/ve#vm \
- && ./nix \
-   store \
-   gc \
-   --verbose \
- && nix-collect-garbage --delete-old \
- && ./nix store optimise --verbose
+ && nix flake --version \
+ && nix flake metadata nixpkgs
+
 EOF
 
 podman \
 build \
+--cap-add=SYS_ADMIN \
 --tag alpine-with-ca-certificates-tzdata \
 --target alpine-with-ca-certificates-tzdata \
 . \
-&& podman kill conteiner-unprivileged-alpine-with-ca-certificates-tzdata &> /dev/null \
+&& podman kill conteiner-unprivileged-alpine-with-ca-certificates-tzdata &> /dev/null || true \
 && podman rm --force conteiner-unprivileged-alpine-with-ca-certificates-tzdata || true \
 && podman \
 run \
@@ -166,5 +169,22 @@ run \
 --tty=true \
 --rm=true \
 localhost/alpine-with-ca-certificates-tzdata:latest \
-sh
+sh -c '. ~/.profile && nix flake metadata nixpkgs'
+
+xhost + || nix run nixpkgs#xorg.xhost -- +
+podman \
+run \
+--annotation=run.oci.keep_original_groups=1 \
+--device=/dev/kvm:rw \
+--env="DISPLAY=${DISPLAY:-:0}" \
+--hostname=container-nix \
+--interactive=true \
+--name=conteiner-unprivileged-alpine-with-ca-certificates-tzdata \
+--privileged=true \
+--tty=true \
+--rm=true \
+--volume=/tmp/.X11-unix:/tmp/.X11-unix:ro \
+localhost/alpine-with-ca-certificates-tzdata:latest \
+sh -c '. ~/.profile && nix run nixpkgs#xorg.xclock'
+
 ```
