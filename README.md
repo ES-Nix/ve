@@ -262,3 +262,12 @@ nix run --impure github:guibou/nixGL nix run nixpkgs#godot
 nix run --impure github:guibou/nixGL nix run nixpkgs#obs-studio
 ```
 https://github.com/NixOS/nixpkgs/issues/231561#issuecomment-1546638257
+
+
+
+
+### SOPS-Nix
+
+
+[NixOS Secrets Management | SOPS-NIX](https://www.youtube.com/watch?v=G5f6GC7SnhU)
+
