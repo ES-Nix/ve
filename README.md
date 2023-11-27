@@ -116,7 +116,7 @@ RUN apk update \
  && echo 'End tzdata stuff!' 
 
 # sudo sh -c 'mkdir -pv /nix/var/nix && chmod -v 0777 /nix && chown -Rv '"$(id -nu)":"$(id -gn)"' /nix'
-# RUN mkdir -pv /nix/var/nix && chmod -v 0777 /nix && chown -Rv nixuser:nixgroup /nix
+RUN mkdir -pv /nix/var/nix && chmod -v 0777 /nix && chown -Rv nixuser:nixgroup /nix
 
 USER nixuser
 WORKDIR /home/nixuser
@@ -132,22 +132,17 @@ RUN CURL_OR_WGET_OR_ERROR=$($(curl -V &> /dev/null) && echo 'curl -L' && exit 0 
          --extra-experimental-features auto-allocate-uids \
          registry \
          pin \
-         nixpkgs github:NixOS/nixpkgs/98e7aaa5cfad782b8effe134bff3717280ec41ca \
- && ./nix \
+         nixpkgs github:NixOS/nixpkgs/98e7aaa5cfad782b8effe134bff3717280ec41ca
+RUN ./nix \
          --extra-experimental-features nix-command \
          --extra-experimental-features flakes \
          --extra-experimental-features auto-allocate-uids \
-         profile \
-         install \
-         nixpkgs#pkgsStatic.nix \
- && rm -v ./nix \
- && mkdir -pv "$HOME"/.config/nix \
- && grep 'experimental-features' "$HOME"/.config/nix/nix.conf -q || (echo 'experimental-features = nix-command flakes' >> "$HOME"/.config/nix/nix.conf) \
- && grep 'nix-profile' "$HOME"/.profile -q || (echo 'export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"' >> "$HOME"/.profile) \
- && . "$HOME"/.profile \
- && nix flake --version \
- && nix flake metadata nixpkgs
-
+         build \
+         --impure \
+         --print-out-paths \
+         --print-build-logs \
+         github:ES-Nix/ve/c1bf94254753320cba498b4095c25b30733b358b#vm \
+ && echo
 EOF
 
 podman \
@@ -185,6 +180,85 @@ run \
 --rm=true \
 --volume=/tmp/.X11-unix:/tmp/.X11-unix:ro \
 localhost/alpine-with-ca-certificates-tzdata:latest \
-sh -c '. ~/.profile && nix run nixpkgs#xorg.xclock'
+sh \
+-c \
+'
+. ~/.profile \
+&& nix run nixpkgs#xorg.xclock
+'
 
 ```
+
+
+
+```bash
+./nix \
+--option keep-build-log true \
+--option keep-derivations true \
+--option keep-env-derivations true \
+--option keep-failed true \
+--option keep-going true \
+--option keep-outputs true \
+--extra-experimental-features nix-command \
+--extra-experimental-features flakes \
+--extra-experimental-features auto-allocate-uids \
+store \
+gc \
+--verbose
+```
+
+
+
+```bash
+./nix \
+--extra-experimental-features nix-command \
+--extra-experimental-features flakes \
+--extra-experimental-features auto-allocate-uids \
+run \
+nixpkgs#xorg.xclock 
+```
+
+
+
+```bash
+./nix \
+--extra-experimental-features auto-allocate-uids \
+--extra-experimental-features flakes \
+--extra-experimental-features nix-command \
+run \
+--impure \
+--refresh \
+github:ES-Nix/ve/c1bf94254753320cba498b4095c25b30733b358b#vm 
+```
+
+
+### OpenGL
+
+
+```bash
+nix run nixpkgs#blender
+```
+
+
+```bash
+nix run nixpkgs#godot
+```
+
+```bash
+nix run nixpkgs#openarena
+```
+
+```bash
+nix run --impure github:guibou/nixGL nix run nixpkgs#openarena
+```
+
+
+```bash
+nix run --impure github:guibou/nixGL nix run nixpkgs#godot
+```
+
+
+```bash
+nix run --impure github:guibou/nixGL nix run nixpkgs#obs-studio
+```
+https://github.com/NixOS/nixpkgs/issues/231561#issuecomment-1546638257
