@@ -82,6 +82,8 @@
 
     // {
       nixosConfigurations.vm = nixpkgs.lib.nixosSystem {
+        # About system and maybe --impure
+        # https://www.youtube.com/watch?v=90aB_usqatE&t=3483s
         # system = "${suportedSystem}";
         # Really proud/scared of this hack :fire:
         # nix --system aarch64-linux eval --json nixpkgs#stdenv.isx86_64
