@@ -235,6 +235,13 @@ github:ES-Nix/ve/c1bf94254753320cba498b4095c25b30733b358b#vm
 ### OpenGL
 
 
+https://github.com/NixOS/nixpkgs/issues/9415
+https://nixos.wiki/wiki/Nixpkgs_with_OpenGL_on_non-NixOS
+https://lobste.rs/s/7h20zl/nix_opengl_ubuntu_integration_nightmare
+
+Test it!
+https://github.com/NixOS/nixpkgs/issues/168431
+
 ```bash
 nix run nixpkgs#blender
 ```

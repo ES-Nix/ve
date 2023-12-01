@@ -124,6 +124,140 @@
                 hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
               };
 
+              #
+              vagrantfileAlpine = pkgs.writeText "vagrantfile-alpine" ''
+                Vagrant.configure("2") do |config|
+                  # Every Vagrant development environment requires a box. You can search for
+                  # boxes at https://vagrantcloud.com/search.
+                  config.vm.box = "generic/alpine316"
+
+                  config.vm.provider :libvirt do |v|
+                    v.cpus=8
+                    v.memory = "2048"
+                  end
+
+                  config.vm.synced_folder '.', '/home/vagrant/code'
+
+                  config.vm.provision "shell", inline: <<-SHELL
+
+                    apk add --no-cache xz shadow \
+                    && addgroup vagrant wheel \
+                    && addgroup vagrant kvm \
+                    && chown -v root:kvm /dev/kvm \
+                    && usermod --append --groups kvm vagrant
+
+                    # https://stackoverflow.com/a/59103173
+                    echo 'Start tzdata stuff' \
+                    && apk add --no-cache tzdata \
+                    && (test -d /etc || mkdir -pv /etc) \
+                    && cp -v /usr/share/zoneinfo/America/Recife /etc/localtime \
+                    && echo America/Recife > /etc/timezone \
+                    && apk del tzdata shadow \
+                    && echo 'End tzdata stuff!'
+
+
+                    # https://unix.stackexchange.com/a/400140
+                    echo
+                    df -h /tmp && sudo mount -o remount,size=2G /tmp/ && df -h /tmp
+                    echo
+
+                    su vagrant -lc \
+                    '
+                      env | sort
+                      echo
+
+                      wget -qO- http://ix.io/4Cj0 | sh -
+
+                      echo $PATH
+                      export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
+                      echo $PATH
+
+                      # wget -qO- http://ix.io/4Bqg | sh -
+                    '
+
+                    mkdir -pv /etc/sudoers.d \
+                    && echo 'vagrant:123' | chpasswd \
+                    && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+                  SHELL
+                end
+              '';
+
+              vagrantfileArchlinux = pkgs.writeText "vagrantfile-alpine" ''
+                Vagrant.configure("2") do |config|
+                  config.vm.box = "archlinux/archlinux"
+
+                  config.vm.provider :libvirt do |v|
+                    v.cpus=8
+                    v.memory = "3072"
+                  end
+
+                  config.vm.synced_folder '.', '/home/vagrant/code'
+
+                  config.vm.provision "shell", inline: <<-SHELL
+                    su vagrant -lc \
+                    '
+                      env | sort
+                      echo
+
+                      # curl -L http://ix.io/4Cj0 | sh -
+
+                      echo $PATH
+                      export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
+                      echo $PATH
+
+                      # wget -qO- http://ix.io/4Bqg | sh -
+                    '
+
+                    mkdir -pv /etc/sudoers.d \
+                    && echo 'vagrant:123' | chpasswd \
+                    && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+                  SHELL
+                end
+              '';
+
+              vagrantfileUbuntu = pkgs.writeText "vagrantfile-alpine" ''
+                Vagrant.configure("2") do |config|
+                  config.vm.box = "generic/ubuntu2204"
+                  # config.vm.box = "generic/ubuntu2304"
+
+                  config.vm.provider :libvirt do |v|
+                    v.cpus=8
+                    v.memory = "3072"
+                  end
+
+                  config.vm.synced_folder '.', '/home/vagrant/code'
+
+                  config.vm.provision "shell", inline: <<-SHELL
+
+                    # TODO: revise it
+                    # https://unix.stackexchange.com/a/400140
+                    # https://stackoverflow.com/a/69288266
+                    RAM_IN_GIGAS=$(expr $(sed -n '/^MemTotal:/ s/[^0-9]//gp' /proc/meminfo) / 1024 / 1024)
+                    echo "$RAM_IN_GIGAS"
+                    # df -h /tmp && sudo mount -o remount,size="$RAM_IN_GIGAS"G /tmp/ && df -h /tmp
+
+                    su vagrant -lc \
+                    '
+                      env | sort
+                      echo
+
+                      wget -qO- http://ix.io/4Cj0 | sh -
+
+                      echo $PATH
+                      export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
+                      echo $PATH
+
+                      # wget -qO- http://ix.io/4Bqg | sh -
+                    '
+
+                    mkdir -pv /etc/sudoers.d \
+                    && echo 'vagrant:123' | chpasswd \
+                    && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
+
+                  SHELL
+                end
+              '';
+
             in
             {
               # Internationalisation options
@@ -146,7 +280,7 @@
                 # virtualisation.virtualbox.host.enable = true;
                 # virtualisation.virtualbox.host.enableExtensionPack = true;
 
-                virtualisation.useNixStoreImage = true;
+                virtualisation.useNixStoreImage = false;
                 virtualisation.writableStore = true; # TODO: hardening
 
                 virtualisation.docker.enable = true;
@@ -284,183 +418,6 @@
                   sl
 
                   (
-                    writeScriptBin "load-vagrant-images" ''
-                      PROVIDER=libvirt
-                      vagrant box add generic/alpine316 "${alpine316}" --force --provider $PROVIDER
-                      vagrant box add generic/ubuntu2204 "${ubuntu2204}" --force --provider $PROVIDER
-                      vagrant box add generic/ubuntu2304 "${ubuntu2304}" --force --provider $PROVIDER
-                      # vagrant box add archlinux/archlinux "''\${archlinux}" --force --provider $PROVIDER
-                      vagrant box list
-                    ''
-                  )
-
-                  (
-                    let
-                      vagrantfileAlpine = pkgs.writeText "vagrantfile-alpine" ''
-                        Vagrant.configure("2") do |config|
-                          # Every Vagrant development environment requires a box. You can search for
-                          # boxes at https://vagrantcloud.com/search.
-                          config.vm.box = "generic/alpine316"
-
-                          config.vm.provider :libvirt do |v|
-                            v.cpus=8
-                            v.memory = "2048"
-                          end
-
-                          config.vm.synced_folder '.', '/home/vagrant/code'
-
-                          config.vm.provision "shell", inline: <<-SHELL
-
-                            apk add --no-cache xz shadow \
-                            && addgroup vagrant wheel \
-                            && addgroup vagrant kvm \
-                            && chown -v root:kvm /dev/kvm \
-                            && usermod --append --groups kvm vagrant
-
-                            # https://stackoverflow.com/a/59103173
-                            echo 'Start tzdata stuff' \
-                            && apk add --no-cache tzdata \
-                            && (test -d /etc || mkdir -pv /etc) \
-                            && cp -v /usr/share/zoneinfo/America/Recife /etc/localtime \
-                            && echo America/Recife > /etc/timezone \
-                            && apk del tzdata shadow \
-                            && echo 'End tzdata stuff!'
-
-
-                            # https://unix.stackexchange.com/a/400140
-                            echo
-                            df -h /tmp && sudo mount -o remount,size=2G /tmp/ && df -h /tmp
-                            echo
-
-                            su vagrant -lc \
-                            '
-                              env | sort
-                              echo
-
-                              wget -qO- http://ix.io/4Cj0 | sh -
-
-                              echo $PATH
-                              export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
-                              echo $PATH
-
-                              # wget -qO- http://ix.io/4Bqg | sh -
-                            '
-
-                            mkdir -pv /etc/sudoers.d \
-                            && echo 'vagrant:123' | chpasswd \
-                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
-                          SHELL
-                        end
-                      '';
-
-                      vagrantfileArchlinux = pkgs.writeText "vagrantfile-alpine" ''
-                        Vagrant.configure("2") do |config|
-                          config.vm.box = "archlinux/archlinux"
-
-                          config.vm.provider :libvirt do |v|
-                            v.cpus=8
-                            v.memory = "3072"
-                          end
-
-                          config.vm.synced_folder '.', '/home/vagrant/code'
-
-                          config.vm.provision "shell", inline: <<-SHELL
-                            su vagrant -lc \
-                            '
-                              env | sort
-                              echo
-
-                              # curl -L http://ix.io/4Cj0 | sh -
-
-                              echo $PATH
-                              export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
-                              echo $PATH
-
-                              # wget -qO- http://ix.io/4Bqg | sh -
-                            '
-
-                            mkdir -pv /etc/sudoers.d \
-                            && echo 'vagrant:123' | chpasswd \
-                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
-                          SHELL
-                        end
-                      '';
-
-                      vagrantfileUbuntu = pkgs.writeText "vagrantfile-alpine" ''
-                        Vagrant.configure("2") do |config|
-                          config.vm.box = "generic/ubuntu2304"
-
-                          config.vm.provider :libvirt do |v|
-                            v.cpus=8
-                            v.memory = "3072"
-                          end
-
-                          config.vm.synced_folder '.', '/home/vagrant/code'
-
-                          config.vm.provision "shell", inline: <<-SHELL
-
-                            # TODO: revise it
-                            # https://unix.stackexchange.com/a/400140
-                            # https://stackoverflow.com/a/69288266
-                            RAM_IN_GIGAS=$(expr $(sed -n '/^MemTotal:/ s/[^0-9]//gp' /proc/meminfo) / 1024 / 1024)
-                            echo "$RAM_IN_GIGAS"
-                            # df -h /tmp && sudo mount -o remount,size="$RAM_IN_GIGAS"G /tmp/ && df -h /tmp
-
-                            su vagrant -lc \
-                            '
-                              env | sort
-                              echo
-
-                              wget -qO- http://ix.io/4Cj0 | sh -
-
-                              echo $PATH
-                              export PATH="$HOME"/.nix-profile/bin:"$HOME"/.local/bin:"$PATH"
-                              echo $PATH
-
-                              # wget -qO- http://ix.io/4Bqg | sh -
-                            '
-
-                            mkdir -pv /etc/sudoers.d \
-                            && echo 'vagrant:123' | chpasswd \
-                            && echo 'vagrant ALL=(ALL) PASSWD:SETENV: ALL' > /etc/sudoers.d/vagrant
-
-                          SHELL
-                        end
-                      '';
-
-                    in
-                    writeScriptBin "copy-vagrantfiles" ''
-                      mkdir -pv /home/nixuser/vagrant-examples/{alpine,archlinux,ubuntu}
-
-                      cp -v "${vagrantfileAlpine}" /home/nixuser/vagrant-examples/alpine/Vagrantfile
-                      chmod 0664 -v /home/nixuser/vagrant-examples/alpine/Vagrantfile
-
-                      cp -v "${vagrantfileArchlinux}" /home/nixuser/vagrant-examples/archlinux/Vagrantfile
-                      chmod 0664 -v /home/nixuser/vagrant-examples/archlinux/Vagrantfile
-
-                      cp -v "${vagrantfileUbuntu}" /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
-                      chmod 0664 -v /home/nixuser/vagrant-examples/ubuntu/Vagrantfile
-                    ''
-                  )
-
-                  (
-                    writeScriptBin "prepare-vagrant" ''
-                      copy-vagrantfiles \
-                      && load-vagrant-images \
-                      && echo
-
-                      # cd /home/nixuser/vagrant-examples/alpine \
-                      # && vagrant up
-
-                      cd /home/nixuser/vagrant-examples/ubuntu \
-                      && vagrant up
-
-                      echo
-                      vagrant global-status
-                    ''
-                  )
-
-                  (
                     writeScriptBin "fix-k8s-cluster-admin-key" ''
                       #! ${pkgs.runtimeShell} -e
                       sudo chmod 0660 -v /var/lib/kubernetes/secrets/cluster-admin-key.pem
@@ -551,6 +508,80 @@
                 enableGhostscriptFonts = true;
               };
 
+              systemd.services.populate-history-vagrant = {
+                script = ''
+                  echo "Started"
+
+                  echo "cd /home/nixuser/vagrant-examples" >> /home/nixuser/.zsh_history
+                  echo "vagrant ssh" >> /home/nixuser/.zsh_history
+                  echo "vagrant destroy --force; vagrant destroy --force && vagrant up && vagrant ssh" >> /home/nixuser/.zsh_history
+                  echo "cd /home/nixuser/vagrant-examples/ubuntu && vagrant up && vagrant ssh && sleep 10 && vagrant ssh" >> /home/nixuser/.zsh_history
+                  echo "vagrant global-status" >> /home/nixuser/.zsh_history
+                  echo "journalctl -u copy-vagrant-examples-vagrant-up.service -b -f" >> /home/nixuser/.zsh_history
+
+                  chown -v nixuser:nixgroup /home/nixuser/.zsh_history
+
+                  echo "Ended"
+                '';
+                wantedBy = [ "multi-user.target" ];
+              };
+
+              # journalctl -u copy-vagrant-examples-vagrant-up.service -b
+              systemd.services.copy-vagrant-examples-vagrant-up = {
+                path = with pkgs; [
+                  curl
+                  gnutar
+                  gzip
+                  procps
+                  vagrant
+                  xz
+                ];
+                /*
+                  # "''\${pkgs.vagrant}"/bin/vagrant box add generic/alpine316 "''\${alpine316}" --force --provider $PROVIDER
+                  # "''\${pkgs.vagrant}"/bin/vagrant box add generic/ubuntu2304 "''\${ubuntu2304}" --force --provider $PROVIDER
+                  # "''\${pkgs.vagrant}"/bin/vagrant box add archlinux/archlinux "''\${archlinux}" --force --provider $PROVIDER
+
+                  # cd alpine \
+                  # && "''\${pkgs.vagrant}"/bin/vagrant up \
+                  # && cd ..
+                */
+                script = ''
+                  #! ${pkgs.runtimeShell} -e
+
+                    echo #####
+                    date +'%d/%m/%Y %H:%M:%S:%3N'
+
+                    BASE_DIR=/home/nixuser/vagrant-examples
+                    mkdir -pv "$BASE_DIR"/{alpine,archlinux,ubuntu}
+
+                    cd "$BASE_DIR"
+
+                    cp -v "${vagrantfileAlpine}" alpine/Vagrantfile
+                    chmod 0664 -v alpine/Vagrantfile
+
+                    cp -v "${vagrantfileArchlinux}" archlinux/Vagrantfile
+                    chmod 0664 -v archlinux/Vagrantfile
+
+                    cp -v "${vagrantfileUbuntu}" ubuntu/Vagrantfile
+                    chmod 0664 -v ubuntu/Vagrantfile
+
+                    chown -Rv nixuser:nixgroup .
+
+                    PROVIDER=libvirt
+
+                    "${pkgs.vagrant}"/bin/vagrant box add generic/ubuntu2204 "${ubuntu2204}" --force --provider $PROVIDER \
+                    && "${pkgs.vagrant}"/bin/vagrant box list \
+                    && cd ubuntu \
+                    && "${pkgs.vagrant}"/bin/vagrant up \
+                    && cd .. \
+                    && vagrant global-status
+
+                    cd .. \
+                    && chown -Rv nixuser:nixgroup .
+                '';
+                wantedBy = [ "multi-user.target" ];
+              };
+
               # Hack to fix annoying zsh warning, too overkill probably
               # https://www.reddit.com/r/NixOS/comments/cg102t/how_to_run_a_shell_command_upon_startup/eudvtz1/?utm_source=reddit&utm_medium=web2x&context=3
               systemd.services.fix-zsh-warning = {
@@ -612,6 +643,7 @@
 
               services.xserver.displayManager.autoLogin.user = "nixuser";
 
+              # https://nixos.org/manual/nixos/stable/#sec-xfce
               services.xserver.desktopManager.xfce.enable = true;
               services.xserver.desktopManager.xfce.enableScreensaver = false;
 
