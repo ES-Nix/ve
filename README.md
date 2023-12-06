@@ -66,9 +66,10 @@ gc \
 
 
 List:
-- https://www.youtube.com/watch?v=2aJSAzLW6fg
+- [Set up Kubernetes 1.24 on Ubuntu 22.04 with Vagrant | VirtualBox | Libvirt](https://www.youtube.com/watch?v=2aJSAzLW6fg)
 - https://github.com/justmeandopensource/kubernetes/blob/master/vagrant-provisioning/Vagrantfile
 - https://gist.github.com/danielepolencic/ef4ddb763fd9a18bf2f1eaaa2e337544
+- [NixCon2023 Nix and Kubernetes: Deployments Done Right](https://www.youtube.com/watch?v=SEA1Qm8K4gY)
 
 
 ### nix 
