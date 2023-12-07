@@ -30,13 +30,17 @@ du -hs nixos.qcow2 \
 && rm -fv nixos.qcow2
 
 df -h / \
-&& nix run --impure --refresh github:ES-Nix/ve#vm
+&& nix run --impure --refresh --verbose github:ES-Nix/ve#vm
 ```
 
 
 Local:
 ```bash
-export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200" && nix run .#vm
+du -hs nixos.qcow2 \
+&& rm -fv nixos.qcow2
+
+df -h / \
+&& nix run --impure --refresh --verbose .#vm
 ```
 
 

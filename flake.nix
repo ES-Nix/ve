@@ -105,7 +105,7 @@
               pedroKeys = "ssh-ed25519 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPOK55vtFrqxd5idNzCd2nhr5K3ocoyw1JKWSM1E7f9i pedroalencarregis@hotmail.com";
 
               alpine316 = pkgs.fetchurl {
-                url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.2.10/providers/libvirt.box";
+                url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.3.8/providers/libvirt.box";
                 hash = "sha256-2h68dE9u6t+m8+gOT3YYD2fxb+/upRb3z79eth9uzEI=";
               };
 
@@ -115,12 +115,12 @@
               };
 
               ubuntu2204 = pkgs.fetchurl {
-                url = "https://app.vagrantup.com/generic/boxes/ubuntu2204/versions/4.2.10/providers/libvirt.box";
-                hash = "sha256-vSjwtLxUa7U3Mb1Ech36iGeR/ldV75JLJPv5eSthEZc=";
+                url = "https://app.vagrantup.com/generic/boxes/ubuntu2204/versions/4.3.8/providers/libvirt.box";
+                hash = "sha256-ZkzHC1WJITQWSxKCn9VsuadabZEnu+1lR4KD58PVGrQ=";
               };
 
               ubuntu2304 = pkgs.fetchurl {
-                url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.4/providers/libvirt/amd64/vagrant.box";
+                url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.8/providers/libvirt/amd64/vagrant.box";
                 hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
               };
 
@@ -182,7 +182,7 @@
                 end
               '';
 
-              vagrantfileArchlinux = pkgs.writeText "vagrantfile-alpine" ''
+              vagrantfileArchlinux = pkgs.writeText "vagrantfile-archlinux" ''
                 Vagrant.configure("2") do |config|
                   config.vm.box = "archlinux/archlinux"
 
@@ -215,14 +215,16 @@
                 end
               '';
 
-              vagrantfileUbuntu = pkgs.writeText "vagrantfile-alpine" ''
+              vagrantfileUbuntu = pkgs.writeText "vagrantfile-ubuntu" ''
                 Vagrant.configure("2") do |config|
                   config.vm.box = "generic/ubuntu2204"
                   # config.vm.box = "generic/ubuntu2304"
 
                   config.vm.provider :libvirt do |v|
                     v.cpus=8
-                    v.memory = "3072"
+                    v.memory = "2048"
+                    # v.memorybacking :access, :mode => "shared"
+                    # https://github.com/vagrant-libvirt/vagrant-libvirt/issues/1460
                   end
 
                   config.vm.synced_folder '.', '/home/vagrant/code'
@@ -308,9 +310,12 @@
                 virtualisation.diskSize = 1024 * 50; # Use MiB memory.
                 virtualisation.cores = 8; # Number of cores.
                 virtualisation.graphics = true;
-                # virtualisation.forwardPorts = [
-                #   { from = "host"; host.port = 8888; guest.port = 80; }
-                # ];
+                /*
+                export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200"
+                virtualisation.forwardPorts = [
+                  { from = "host"; host.port = 8888; guest.port = 80; }
+                ];
+                */
 
                 /*
                 xdpyinfo | grep dimensions
@@ -425,6 +430,15 @@
                     ''
                   )
 
+                  (
+                    writeScriptBin "prepare-vagrant-vms" ''
+                      #! ${pkgs.runtimeShell} -e
+
+                      # $(vagrant global-status | grep -q alpine) || cd /home/nixuser/vagrant-examples/alpine && vagrant up
+                      $(vagrant global-status | grep -q ubuntu) || cd /home/nixuser/vagrant-examples/ubuntu && vagrant up
+                    ''
+                  )
+
                 ];
                 # shell = pkgs.bashInteractive;
                 shell = pkgs.zsh;
@@ -508,7 +522,7 @@
                 enableGhostscriptFonts = true;
               };
 
-              systemd.services.populate-history-vagrant = {
+              systemd.user.services.populate-history-vagrant = {
                 script = ''
                   echo "Started"
 
@@ -517,17 +531,17 @@
                   echo "vagrant destroy --force; vagrant destroy --force && vagrant up && vagrant ssh" >> /home/nixuser/.zsh_history
                   echo "cd /home/nixuser/vagrant-examples/ubuntu && vagrant up && vagrant ssh && sleep 10 && vagrant ssh" >> /home/nixuser/.zsh_history
                   echo "vagrant global-status" >> /home/nixuser/.zsh_history
-                  echo "journalctl -u copy-vagrant-examples-vagrant-up.service -b -f" >> /home/nixuser/.zsh_history
-
-                  chown -v nixuser:nixgroup /home/nixuser/.zsh_history
+                  echo "vagrant box list" >> /home/nixuser/.zsh_history
+                  echo "prepare-vagrant-vms" >> /home/nixuser/.zsh_history
+                  echo "journalctl --user --unit copy-vagrant-examples-vagrant-up.service -b -f" >> /home/nixuser/.zsh_history
 
                   echo "Ended"
                 '';
-                wantedBy = [ "multi-user.target" ];
+                wantedBy = [ "default.target" ];
               };
 
-              # journalctl -u copy-vagrant-examples-vagrant-up.service -b
-              systemd.services.copy-vagrant-examples-vagrant-up = {
+              # journalctl --user --unit copy-vagrant-examples-vagrant-up.service -b -f
+              systemd.user.services.copy-vagrant-examples-vagrant-up = {
                 path = with pkgs; [
                   curl
                   gnutar
@@ -536,20 +550,9 @@
                   vagrant
                   xz
                 ];
-                /*
-                  # "''\${pkgs.vagrant}"/bin/vagrant box add generic/alpine316 "''\${alpine316}" --force --provider $PROVIDER
-                  # "''\${pkgs.vagrant}"/bin/vagrant box add generic/ubuntu2304 "''\${ubuntu2304}" --force --provider $PROVIDER
-                  # "''\${pkgs.vagrant}"/bin/vagrant box add archlinux/archlinux "''\${archlinux}" --force --provider $PROVIDER
 
-                  # cd alpine \
-                  # && "''\${pkgs.vagrant}"/bin/vagrant up \
-                  # && cd ..
-                */
                 script = ''
                   #! ${pkgs.runtimeShell} -e
-
-                    echo #####
-                    date +'%d/%m/%Y %H:%M:%S:%3N'
 
                     BASE_DIR=/home/nixuser/vagrant-examples
                     mkdir -pv "$BASE_DIR"/{alpine,archlinux,ubuntu}
@@ -557,43 +560,49 @@
                     cd "$BASE_DIR"
 
                     cp -v "${vagrantfileAlpine}" alpine/Vagrantfile
-                    chmod 0664 -v alpine/Vagrantfile
 
                     cp -v "${vagrantfileArchlinux}" archlinux/Vagrantfile
-                    chmod 0664 -v archlinux/Vagrantfile
 
                     cp -v "${vagrantfileUbuntu}" ubuntu/Vagrantfile
-                    chmod 0664 -v ubuntu/Vagrantfile
-
-                    chown -Rv nixuser:nixgroup .
 
                     PROVIDER=libvirt
 
-                    "${pkgs.vagrant}"/bin/vagrant box add generic/ubuntu2204 "${ubuntu2204}" --force --provider $PROVIDER \
-                    && "${pkgs.vagrant}"/bin/vagrant box list \
-                    && cd ubuntu \
-                    && "${pkgs.vagrant}"/bin/vagrant up \
-                    && cd .. \
-                    && vagrant global-status
-
-                    cd .. \
-                    && chown -Rv nixuser:nixgroup .
+                    vagrant \
+                         box \
+                         add \
+                         generic/ubuntu2204 \
+                         "${ubuntu2204}" \
+                         --force \
+                         --provider \
+                         $PROVIDER \
+                    && vagrant \
+                         box \
+                         add \
+                         generic/alpine316 \
+                         "${alpine316}" \
+                         --force \
+                         --provider \
+                         $PROVIDER \
+                    && echo 000 \
+                    && vagrant box list \
+                    && echo 111
                 '';
-                wantedBy = [ "multi-user.target" ];
+                # wantedBy = [ "multi-user.target" ];
+                wantedBy = [ "default.target" ];
               };
 
               # Hack to fix annoying zsh warning, too overkill probably
               # https://www.reddit.com/r/NixOS/comments/cg102t/how_to_run_a_shell_command_upon_startup/eudvtz1/?utm_source=reddit&utm_medium=web2x&context=3
-              systemd.services.fix-zsh-warning = {
+              systemd.user.services.fix-zsh-warning = {
                 script = ''
                   echo "Fixing a zsh warning"
                   # https://stackoverflow.com/questions/638975/how-wdo-i-tell-if-a-regular-file-does-not-exist-in-bash#comment25226870_638985
                   test -f /home/nixuser/.zshrc || touch /home/nixuser/.zshrc && chown nixuser: -Rv /home/nixuser
                 '';
-                wantedBy = [ "multi-user.target" ];
+                wantedBy = [ "default.target" ];
               };
 
-              # journalctl -u fix-k8s.service -b
+              # journalctl -u fix-k8s.service -b -f
               systemd.services.fix-k8s = {
                 script = ''
                   echo "Fixing k8s"
