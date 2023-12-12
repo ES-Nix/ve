@@ -421,6 +421,7 @@
                   which
                   awscli
                   sl
+                  nix-info
 
                   (
                     writeScriptBin "fix-k8s-cluster-admin-key" ''
@@ -641,8 +642,11 @@
 
               # https://www.reddit.com/r/NixOS/comments/wcxved/i_gave_an_adhoc_lightning_talk_at_mch2022/
               # Matthew Croughan - Use flake.nix, not Dockerfile - MCH2022
+              # file $(readlink -f $(which hello))
               # nixos-option boot.binfmt.emulatedSystems
-              boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+              # https://github.com/ryan4yin/nixos-and-flakes-book/blob/main/docs/development/cross-platform-compilation.md#custom-build-toolchain
+              # https://github.com/ryan4yin/nixos-and-flakes-book/blob/fb2fe1224a4277374cde01404237acc5fecf895a/docs/development/cross-platform-compilation.md#linux-binfmt_misc
+              # boot.binfmt.emulatedSystems = [ "aarch64-linux" "riscv64-linux" ];
 
               services.qemuGuest.enable = true;
 
@@ -667,6 +671,7 @@
               services.spice-vdagentd.enable = true;
 
               nixpkgs.config.allowUnfree = true;
+
               nix = {
                 extraOptions = "experimental-features = nix-command flakes";
                 package = pkgs.nixVersions.nix_2_10;
@@ -678,21 +683,37 @@
 
                   nix eval --raw nixpkgs#pkgs.path
                   /nix/store/375da3gc24ijmjz622h0wdsqnzvkajbh-b1l1kkp1g07gy67wglfpwlwaxs1rqkpx-source
+
+                  nix-info -m | grep store | cut -d'`' -f2
+
+                  nix eval --impure --expr '<nixpkgs>'
+                  nix eval --impure --raw --expr '(builtins.getFlake "nixpkgs").outPath'
+                  nix-instantiate --eval --attr 'path' '<nixpkgs>'
+                  nix-instantiate --eval --attr 'pkgs.path' '<nixpkgs>'
+                  nix-instantiate --eval --expr 'builtins.findFile builtins.nixPath "nixpkgs"'
+
+                  nix eval nixpkgs#path
+                  nix eval nixpkgs#pkgs.path
                 */
-                # nixPath = ["nixpkgs=${pkgs.path}"]; # TODO: test it
+                nixPath = ["nixpkgs=${pkgs.path}"]; # TODO: test it
+                /*
                 nixPath = [
                   "nixpkgs=/etc/channels/nixpkgs"
                   "nixos-config=/etc/nixos/configuration.nix"
                   # "/nix/var/nix/profiles/per-user/root/channels"
                 ];
+                */
               };
 
-              environment.etc."channels/nixpkgs".source = nixpkgs.outPath;
+              # environment.etc."channels/nixpkgs".source = nixpkgs.outPath;
+              # environment.etc."channels/nixpkgs".source = "${pkgs.path}";
+              environment.etc."channels/nixpkgs".source = "${pkgs.path}";
 
               environment.systemPackages = with pkgs; [
                 bashInteractive
                 # hello
                 # pkgsCross.aarch64-multiplatform.pkgsStatic.hello
+                # pkgsCross.riscv64.pkgsStatic.hello
                 openssh
                 virt-manager
                 # gnome3.dconf-editor
