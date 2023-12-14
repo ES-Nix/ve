@@ -121,7 +121,7 @@
 
               ubuntu2304 = pkgs.fetchurl {
                 url = "https://app.vagrantup.com/generic/boxes/ubuntu2304/versions/4.3.8/providers/libvirt/amd64/vagrant.box";
-                hash = "sha256-MRYXoDg/xCuxcNsh0OpY6e9XlPU+JER2tPUBuZ1y9QI=";
+                hash = "sha256-NJSYFp7RmL0BlY8VBltSFPCCdajk5J5wMD2++aBnxCw=";
               };
 
               #
@@ -217,8 +217,8 @@
 
               vagrantfileUbuntu = pkgs.writeText "vagrantfile-ubuntu" ''
                 Vagrant.configure("2") do |config|
-                  config.vm.box = "generic/ubuntu2204"
-                  # config.vm.box = "generic/ubuntu2304"
+                  # config.vm.box = "generic/ubuntu2204"
+                  config.vm.box = "generic/ubuntu2304"
 
                   config.vm.provider :libvirt do |v|
                     v.cpus=8
@@ -551,7 +551,18 @@
                   vagrant
                   xz
                 ];
-
+                /*
+                     generic/ubuntu2204 \
+                     "${ubuntu2204}" \
+                     --force \
+                     --provider \
+                     $PROVIDER \
+                && vagrant \
+                     box \
+                     add \
+                     generic/alpine316 \
+                     "${alpine316}" \
+                */
                 script = ''
                   #! ${pkgs.runtimeShell} -e
 
@@ -567,20 +578,11 @@
                     cp -v "${vagrantfileUbuntu}" ubuntu/Vagrantfile
 
                     PROVIDER=libvirt
-
                     vagrant \
                          box \
                          add \
-                         generic/ubuntu2204 \
-                         "${ubuntu2204}" \
-                         --force \
-                         --provider \
-                         $PROVIDER \
-                    && vagrant \
-                         box \
-                         add \
-                         generic/alpine316 \
-                         "${alpine316}" \
+                         generic/ubuntu2304 \
+                         "${ubuntu2304}" \
                          --force \
                          --provider \
                          $PROVIDER \
@@ -588,7 +590,6 @@
                     && vagrant box list \
                     && echo 111
                 '';
-                # wantedBy = [ "multi-user.target" ];
                 wantedBy = [ "default.target" ];
               };
 
