@@ -409,6 +409,7 @@
                   # yt-dlp
 
                   btop
+                  firefox
                   git
                   tilix
                   starship

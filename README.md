@@ -74,6 +74,7 @@ List:
 - https://github.com/justmeandopensource/kubernetes/blob/master/vagrant-provisioning/Vagrantfile
 - https://gist.github.com/danielepolencic/ef4ddb763fd9a18bf2f1eaaa2e337544
 - [NixCon2023 Nix and Kubernetes: Deployments Done Right](https://www.youtube.com/watch?v=SEA1Qm8K4gY)
+- [NixOS Kubernetes Cluster](https://www.youtube.com/watch?v=rTovNSGH_qo)
 
 
 ### nix 
