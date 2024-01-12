@@ -34,7 +34,15 @@ df -h / \
 ```
 
 
-Local:
+#### Local
+
+```bash 
+nix flake clone 'git+ssh://git@github.com/ES-Nix/ve.git' --dest ve \
+&& cd ve 1>/dev/null 2>/dev/null \
+&& (direnv --version 1>/dev/null 2>/dev/null && direnv allow) \
+|| nix develop --command $SHELL
+```
+
 ```bash
 du -hs nixos.qcow2 \
 && rm -fv nixos.qcow2
