@@ -22,7 +22,7 @@
             system = suportedSystem;
             config = {
               allowUnfree = true;
-              # Broken
+              # Re test it!
               overlays = [
                 (final: prev: {
                   sl = final.hello;
@@ -39,34 +39,43 @@
 
           packages.automatic-vm = pkgsAllowUnfree.writeShellApplication {
             name = "run-nixos-vm";
-            runtimeInputs = [ pkgsAllowUnfree.virt-viewer ];
+            runtimeInputs = with pkgsAllowUnfree; [ curl virt-viewer ];
+            /*
+              Pode ocorrer uma condição de corrida de seguinte forma:
+              a VM inicializa (o processo não é bloqueante, executa em background)
+              o spice/VNC interno a VM inicializa
+              o remote-viewer tenta conectar, mas o spice não está pronto ainda
+
+              TODO: idealmente não deveria ser preciso ter mais uma dependência (o curl)
+                    para poder sincronizar o cliente e o server. Será que no caso de
+                    ambos estarem na mesma máquina seria melhor usar virt-viewer -fw?
+              https://unix.stackexchange.com/a/698488
+            */
             text = ''
               ${self.nixosConfigurations.vm.config.system.build.vm}/bin/run-nixos-vm & PID_QEMU="$!"
 
-              for _ in web{0..10};do
-                if remote-viewer spice://localhost:3001
+              export VNC_PORT=3001
+
+              for _ in web{0..50}; do
+                if [[ $(curl --fail --silent http://localhost:"$VNC_PORT") -eq 1 ]];
                 then
                   break
                 fi
-                date +'%d/%m/%Y %H:%M:%S:%3N'
-                sleep 0.5
+                # date +'%d/%m/%Y %H:%M:%S:%3N'
+                sleep 0.2
               done;
-              # remote-viewer spice://127.0.0.1:5930
+
+              remote-viewer spice://localhost:"$VNC_PORT"
+
               kill $PID_QEMU
             '';
           };
 
-          apps.run-vm = {
-            type = "app";
-            program = "${self.packages."${suportedSystem}".automatic-vm}/bin/run-nixos-vm";
-          };
-
           formatter = pkgsAllowUnfree.nixpkgs-fmt;
 
-          # Utilized by `nix run .#<name>`
-          apps.vm = {
+          apps.run-github-runner = {
             type = "app";
-            program = "${self.nixosConfigurations.vm.config.system.build.vm}/bin/run-nixos-vm";
+            program = "${self.packages."${suportedSystem}".automatic-vm}/bin/run-nixos-vm";
           };
 
           devShells.default = pkgsAllowUnfree.mkShell {
@@ -530,7 +539,7 @@
               # https://github.com/NixOS/nixpkgs/issues/176081#issuecomment-1145825623
               fonts = {
                 fontDir.enable = true;
-                fonts = with pkgs; [
+                packages = with pkgs; [
                   # fontconfig
 
                   powerline
@@ -544,7 +553,7 @@
                   # dina-font
                   # proggyfonts
                 ];
-                enableDefaultFonts = true;
+                enableDefaultPackages = true;
                 enableGhostscriptFonts = true;
               };
 
@@ -635,11 +644,11 @@
               # https://github.com/NixOS/nixpkgs/issues/21332#issuecomment-268730694
               services.openssh = {
                 allowSFTP = true;
-                kbdInteractiveAuthentication = false;
+                settings.KbdInteractiveAuthentication = false;
                 enable = true;
-                forwardX11 = false;
-                passwordAuthentication = false;
-                permitRootLogin = "yes";
+                settings.X11Forwarding = false;
+                settings.PasswordAuthentication = false;
+                settings.PermitRootLogin = "yes";
                 ports = [ 10022 ];
                 authorizedKeysFiles = [
                   "${ pkgs.writeText "nixuser-keys.pub" "${toString nixuserKeys}" }"
@@ -711,10 +720,11 @@
 
               nixpkgs.config.allowUnfree = true;
 
+              boot.readOnlyNixStore = true;
+
               nix = {
                 extraOptions = "experimental-features = nix-command flakes";
                 package = pkgs.nixVersions.nix_2_10;
-                readOnlyStore = true;
                 registry.nixpkgs.flake = nixpkgs; # https://bou.ke/blog/nix-tips/
                 /*
                   echo $NIX_PATH
