@@ -15,6 +15,17 @@
         # "x86_64-darwin"
       ];
     in
+    {
+      inherit (self) outputs;
+
+      overlays.default = final: prev: {
+        inherit self final prev;
+
+        foo-bar = prev.cowsay;
+        sudo = prev.sudo.override { withInsults = true; }; # Just to remember you :]
+
+      };
+    } //
     flake-utils.lib.eachSystem suportedSystems
       (suportedSystem:
         let
@@ -271,6 +282,14 @@
                     echo "$RAM_IN_GIGAS"
                     # df -h /tmp && sudo mount -o remount,size="$RAM_IN_GIGAS"G /tmp/ && df -h /tmp
 
+                    # Could not access KVM kernel module: Permission denied
+                    # qemu-kvm: failed to initialize kvm: Permission denied
+                    # qemu-kvm: falling back to tcg
+                    echo "Start kvm stuff..." \
+                    && (getent group kvm || groupadd kvm) \
+                    && sudo usermod --append --groups kvm vagrant \
+                    && echo "End kvm stuff!"
+
                     su vagrant -lc \
                     '
                       env | sort
@@ -307,39 +326,48 @@
               boot.loader.systemd-boot.enable = true;
               fileSystems."/" = { device = "/dev/hda1"; };
 
-              virtualisation.vmVariant = {
-                # It does not work for ARM tested it too
-                # users.extraGroups.vboxusers.members = [ "nixuser" ];
-                # virtualisation.virtualbox.guest.enable = true;
-                # virtualisation.virtualbox.guest.x11 = true;
-                # virtualisation.virtualbox.host.enable = true;
-                # virtualisation.virtualbox.host.enableExtensionPack = true;
+              virtualisation.vmVariant =
+                let
+                  isLinuxAndIsx86_64 = (pkgs.stdenv.isLinux && pkgs.stdenv.isx86_64);
+                in
+                {
+                  # It does not work for many hardwares...
+                  # About cache miss:
+                  # https://www.reddit.com/r/NixOSMasterRace/comments/17e4fvw/new_user_entered_the_lobby/
+                  users.extraGroups.vboxusers.members = if isLinuxAndIsx86_64 then [ "nixuser" ] else [ ];
+                  virtualisation.virtualbox.guest.enable = isLinuxAndIsx86_64;
+                  virtualisation.virtualbox.guest.x11 = isLinuxAndIsx86_64;
+                  virtualisation.virtualbox.host.enable = isLinuxAndIsx86_64;
+                  virtualisation.virtualbox.host.enableExtensionPack = isLinuxAndIsx86_64;
 
-                virtualisation.useNixStoreImage = false;
-                virtualisation.writableStore = true; # TODO: hardening
+                  virtualisation.useNixStoreImage = false;
+                  virtualisation.writableStore = true; # TODO: hardening
 
-                virtualisation.docker.enable = true;
-                virtualisation.podman.enable = true;
+                  virtualisation.docker.enable = true;
+                  virtualisation.podman.enable = false; # Enabling k8s breaks podman
 
-                virtualisation.libvirtd.enable = true;
+                  virtualisation.libvirtd.enable = true;
 
-                programs.dconf.enable = true;
-                # security.polkit.enable = true; # TODO: hardening?
+                  programs.dconf.enable = true;
+                  # security.polkit.enable = true; # TODO: hardening?
 
-                environment.variables = {
-                  VAGRANT_DEFAULT_PROVIDER = "libvirt";
+                  environment.variables = {
+                    VAGRANT_DEFAULT_PROVIDER = "libvirt";
+                    # VAGRANT_DEFAULT_PROVIDER = "virtualbox";
+                    /*
+                    https://github.com/erictossell/nixflakes/blob/e97cdba0d6b192655d01f8aef5a6691f587c61fe/modules/virt/libvirt.nix#L29-L36
+                    */
+                    # programs.dconf.enable = true;
+                    # VIRSH_DEFAULT_CONNECT_URI="qemu:///system";
+                    # VIRSH_DEFAULT_CONNECT_URI = "qemu:///session";
+                    # programs.dconf.profiles = pkgs.writeText "org/virt-manager/virt-manager/connections" ''
+                    #  autoconnect = ["qemu:///system"];
+                    #  uris = ["qemu:///system"];
+                    # '';
 
-                  # programs.dconf.enable = true;
-                  # VIRSH_DEFAULT_CONNECT_URI="qemu:///system";
-                  # VIRSH_DEFAULT_CONNECT_URI = "qemu:///session";
-                  # programs.dconf.profiles = pkgs.writeText "org/virt-manager/virt-manager/connections" ''
-                  #  autoconnect = ["qemu:///system"];
-                  #  uris = ["qemu:///system"];
-                  # '';
+                  };
 
-                };
-
-                virtualisation.memorySize = 1024 * 4; # Use MiB memory.
+                virtualisation.memorySize = 1024 * 8; # Use MiB memory.
                 virtualisation.diskSize = 1024 * 50; # Use MiB memory.
                 virtualisation.cores = 8; # Number of cores.
                 virtualisation.graphics = true;
@@ -351,9 +379,9 @@
                 */
 
                 /*
-                xdpyinfo | grep dimensions
+                  xdpyinfo | grep dimensions
 
-                xrandr --current
+                  xrandr --current
                 */
                 # virtualisation.resolution = { x = (1024 - 250); y = (768 - 250); };
                 virtualisation.resolution = lib.mkForce { x = 1024; y = 768; };
@@ -449,25 +477,38 @@
                   # xorg.xclock
                   # yt-dlp
 
+                  awscli
                   btop
-                  firefox
-                  git
-                  tilix
-                  starship
                   coreutils
                   direnv
                   file
+                  firefox
+                  git
                   gnumake
+                  kubernetes-helm
+                  nix-info
                   openssh
+                  openssl
+                  sl
+                  starship
+                  tilix
                   virt-manager
                   which
-                  awscli
-                  sl
-                  nix-info
+                  sudo
 
                   (
                     writeScriptBin "prepare-vagrant-vms" ''
                       #! ${pkgs.runtimeShell} -e
+
+                      set +e
+                      for i in {0..100};do
+
+                        echo "The iteration number is: $i. Time: $(date +'%d/%m/%Y %H:%M:%S:%3N')";
+
+                        if vagrant box list | grep -q generic/ubuntu2304; then
+                          break
+                        fi
+                      done;
 
                       # $(vagrant global-status | grep -q alpine) || cd /home/nixuser/vagrant-examples/alpine && vagrant up
                       $(vagrant global-status | grep -q ubuntu) || cd /home/nixuser/vagrant-examples/ubuntu && vagrant up
@@ -498,6 +539,7 @@
                 enable = true;
                 shellAliases = {
                   vim = "nvim";
+                  k = "kubectl";
                   shebang = "echo '#!/usr/bin/env bash'"; # https://stackoverflow.com/questions/10376206/what-is-the-preferred-bash-shebang#comment72209991_10383546
                   nfmt = "nix run nixpkgs#nixpkgs-fmt **/*.nix *.nix";
                 };
@@ -561,14 +603,18 @@
                 script = ''
                   echo "Started"
 
-                  echo "cd /home/nixuser/vagrant-examples" >> /home/nixuser/.zsh_history
-                  echo "vagrant ssh" >> /home/nixuser/.zsh_history
-                  echo "vagrant destroy --force; vagrant destroy --force && vagrant up && vagrant ssh" >> /home/nixuser/.zsh_history
-                  echo "cd /home/nixuser/vagrant-examples/ubuntu && vagrant up && vagrant ssh && sleep 10 && vagrant ssh" >> /home/nixuser/.zsh_history
-                  echo "vagrant global-status" >> /home/nixuser/.zsh_history
-                  echo "vagrant box list" >> /home/nixuser/.zsh_history
-                  echo "prepare-vagrant-vms" >> /home/nixuser/.zsh_history
-                  echo "journalctl --user --unit copy-vagrant-examples-vagrant-up.service -b -f" >> /home/nixuser/.zsh_history
+                  DESTINATION=/home/nixuser/.zsh_history
+
+                  # TODO:
+                  echo "cd /home/nixuser/vagrant-examples" >> "$DESTINATION"
+                  echo "vagrant ssh" >> "$DESTINATION"
+                  echo "vagrant destroy --force; vagrant destroy --force && vagrant up && vagrant ssh" >> "$DESTINATION"
+                  echo "cd /home/nixuser/vagrant-examples/ubuntu && vagrant up && vagrant ssh && sleep 10 && vagrant ssh" >> "$DESTINATION"
+                  echo "vagrant global-status" >> "$DESTINATION"
+                  echo "vagrant box list" >> "$DESTINATION"
+                  echo "journalctl --user --unit copy-vagrant-examples-vagrant-up.service -b -f" >> "$DESTINATION"
+                  echo "journalctl --user --unit foo.service -b -f" >> "$DESTINATION"
+                  echo "prepare-vagrant-vms && cd /home/nixuser/vagrant-examples/ubuntu && vagrant ssh" >> "$DESTINATION"
 
                   echo "Ended"
                 '';
@@ -674,6 +720,7 @@
               services.xserver.enable = true;
               services.xserver.layout = "br";
 
+              services.xserver.displayManager.autoLogin.enable = true;
               services.xserver.displayManager.autoLogin.user = "nixuser";
               services.xserver.displayManager.sessionCommands = ''
                 exo-open \
@@ -775,16 +822,140 @@
                 neovim
                 nixos-option
                 oh-my-zsh
+                xclip
                 zsh
                 zsh-autosuggestions
                 zsh-completions
+
+                # Looks like kubernetes needs atleast all this
+                kubectl
+                kubernetes
+                #
+                cni
+                cni-plugins
+                conntrack-tools
+                cri-o
+                cri-tools
+                ebtables
+                ethtool
+                flannel
+                iptables
+                socat
+
+                (
+                  writeScriptBin "fix-k8s-cluster-admin-key" ''
+                    #! ${pkgs.runtimeShell} -e
+                    sudo chmod 0660 -v /var/lib/kubernetes/secrets/cluster-admin-key.pem
+                    sudo chown root:kubernetes -v /var/lib/kubernetes/secrets/cluster-admin-key.pem
+                  ''
+                )
+              ];
+
+              # Is this ok to kubernetes?
+              # Why free -h still show swap stuff but with 0?
+              swapDevices = pkgs.lib.mkForce [ ];
+
+              # Is it a must for k8s?
+              # Take a look into:
+              # https://github.com/NixOS/nixpkgs/blob/9559834db0df7bb274062121cf5696b46e31bc8c/nixos/modules/services/cluster/kubernetes/kubelet.nix#L255-L259
+              boot.kernel.sysctl = {
+                # If it is enabled it conflicts with what kubelet is doing
+                # "net.bridge.bridge-nf-call-ip6tables" = 1;
+                # "net.bridge.bridge-nf-call-iptables" = 1;
+
+                # https://docs.projectcalico.org/v3.9/getting-started/kubernetes/installation/migration-from-flannel
+                # https://access.redhat.com/solutions/53031
+                "net.ipv4.conf.all.rp_filter" = 1;
+                # https://www.tenable.com/audits/items/CIS_Debian_Linux_8_Server_v2.0.2_L1.audit:bb0f399418f537997c2b44741f2cd634
+                # "net.ipv4.conf.default.rp_filter" = 1;
+                "vm.swappiness" = 0;
+              };
+
+              environment.variables.KUBECONFIG = "/etc/kubernetes/cluster-admin.kubeconfig";
+
+              #  environment.etc."containers/registries.conf" = {
+              #    mode = "0644";
+              #    text = ''
+              #      [registries.search]
+              #      registries = ['docker.io', 'localhost', 'gcr.io']
+              #    '';
+              #  };
+
+              services.kubernetes.roles = [ "master" "node" ];
+              services.kubernetes.masterAddress = "nixos";
+              services.kubernetes = {
+                flannel.enable = true;
+              };
+
+              environment.etc."kubernets/kubernetes-examples/appvia/deployment.yaml" = {
+                mode = "0644";
+                text = "${builtins.readFile ./kubernetes-examples/appvia/deployment.yaml}";
+              };
+
+              environment.etc."kubernets/kubernetes-examples/appvia/service.yaml" = {
+                mode = "0644";
+                text = "${builtins.readFile ./kubernetes-examples/appvia/service.yaml}";
+              };
+
+              environment.etc."kubernets/kubernetes-examples/appvia/ingress.yaml" = {
+                mode = "0644";
+                text = "${builtins.readFile ./kubernetes-examples/appvia/ingress.yaml}";
+              };
+
+              environment.etc."kubernets/kubernetes-examples/appvia/notes.md" = {
+                mode = "0644";
+                text = "${builtins.readFile ./kubernetes-examples/appvia/notes.md}";
+              };
+
+              # journalctl -u move-kubernetes-examples.service -b
+              systemd.services.move-kubernetes-examples = {
+                script = ''
+                  echo "Started move-kubernets-examples"
+
+                  # cp -rv ''\${./kubernetes-examples} /home/nixuser/
+                  cp -Rv /etc/kubernets/kubernetes-examples/ /home/nixuser/
+
+                  chown -Rv nixuser:nixgroup /home/nixuser/kubernetes-examples
+
+                  kubectl \
+                    apply \
+                    --file /home/nixuser/kubernetes-examples/deployment.yaml \
+                    --file /home/nixuser/kubernetes-examples/service.yaml \
+                    --file /home/nixuser/kubernetes-examples/ingress.yaml
+                '';
+                wantedBy = [ "multi-user.target" ];
+              };
+
+              # https://discourse.nixos.org/t/nixos-firewall-with-kubernetes/23673/2
+              # networking.firewall.trustedInterfaces ??
+              networking.firewall.allowedTCPPorts = [ 8000 8080 8443 9000 9443 ];
+
+              boot.kernelParams = [
+                "swapaccount=0"
+                "systemd.unified_cgroup_hierarchy=0"
+                "group_enable=memory"
+                "cgroup_enable=cpuset"
+                "cgroup_memory=1"
+                "cgroup_enable=memory"
+              ];
+
+              # ulimit -n
+              # https://github.com/NixOS/nixpkgs/issues/159964#issuecomment-1050080111
+              security.pam.loginLimits = [
+                {
+                  domain = "*";
+                  type = "-";
+                  item = "nofile";
+                  value = "9192";
+                }
               ];
 
               system.stateVersion = "22.11";
             })
+            #
 
         ];
-        specialArgs = { inherit nixpkgs; };
+        specialArgs = { inherit nixpkgs allAttrs; };
       };
     };
 }

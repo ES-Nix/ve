@@ -81,9 +81,22 @@ List:
 - [Set up Kubernetes 1.24 on Ubuntu 22.04 with Vagrant | VirtualBox | Libvirt](https://www.youtube.com/watch?v=2aJSAzLW6fg)
 - https://github.com/justmeandopensource/kubernetes/blob/master/vagrant-provisioning/Vagrantfile
 - https://gist.github.com/danielepolencic/ef4ddb763fd9a18bf2f1eaaa2e337544
+- https://thenewstack.io/nixos-a-combination-linux-os-and-package-manager/
+- https://joshrosso.com/c/nix-k8s/
+- [Nix Kubernetes and the Pursuit of Reproducibility - Josh Rosso, Reddit](https://www.youtube.com/watch?v=U-mSWU4see0)
 - [NixCon2023 Nix and Kubernetes: Deployments Done Right](https://www.youtube.com/watch?v=SEA1Qm8K4gY)
 - [NixOS Kubernetes Cluster](https://www.youtube.com/watch?v=rTovNSGH_qo)
+- https://github.com/kubernetes/kubernetes/issues/59978#issuecomment-366318909
+- https://github.com/kubernetes/kubernetes/issues/59978#issuecomment-366331180
+- [Building NixOS Virtual Machines with Kubernetes](https://www.youtube.com/watch?v=jMQ2_aVt9Gg) long
 
+Execises:
+- https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+- https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-initialization/#create-a-pod-that-has-an-init-container
+- https://kubernetes.io/docs/tasks/debug/debug-application/debug-init-containers/
+- https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/
+- https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/
+- 
 
 ### nix 
 
