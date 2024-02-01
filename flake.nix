@@ -21,8 +21,62 @@
       overlays.default = final: prev: {
         inherit self final prev;
 
-        foo-bar = prev.cowsay;
+        foo-bar = prev.hello;
+
+        # it is not working!
         sudo = prev.sudo.override { withInsults = true; }; # Just to remember you :]
+
+        isos =
+          let
+            alpineAarch64FullName = "alpine-standard-3.19.1-aarch64.iso";
+            alpineX86_64FullName = "alpine-standard-3.19.1-x86_64.iso";
+            ubuntuArm64FullName = "ubuntu-22.04.3-live-server-arm64.iso";
+            ubuntuAmd64FullName = "ubuntu-22.04.3-desktop-amd64.iso";
+
+            alpineV3-19-X86_64 = prev.fetchurl {
+              name = "${alpineAarch64FullName}";
+              url = "https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/aarch64/${alpineAarch64FullName}";
+              hash = "sha256-oUF2r7ZEEHG2tzOk4HY4gUWEjl31vXb2P4HU7OzOilI=";
+            };
+
+            alpineV3-19-Amd64 = prev.fetchurl {
+              name = "${alpineX86_64FullName}";
+              url = "https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/x86_64/${alpineX86_64FullName}";
+              hash = "sha256-Y+YvWlLP5zpssTfsuxEbfUg1aGKh3+UNj92XfXJ9oZI=";
+            };
+
+            ubuntu-22-04-Arm64 = prev.fetchurl {
+              name = "${ubuntuArm64FullName}";
+              url = "https://cdimage.ubuntu.com/releases/22.04/release/${ubuntuArm64FullName}";
+              hash = "sha256-pDX285PdpYEXJJDtqfaDwy5JUVingLWh3kIu532Y6Qk=";
+            };
+
+            ubuntu-22-04-Amd64 = prev.fetchurl {
+              name = "${ubuntuAmd64FullName}";
+              url = "https://releases.ubuntu.com/22.04.3/${ubuntuAmd64FullName}";
+              hash = "sha256-pDX285PdpYEXJJDtqfaDwy5JUVingLWh3kIu532Y6Qk=";
+            };
+
+          in
+          prev.runCommand "copy-isos"
+            {
+              nativeBuildInputs = [ prev.coreutils ];
+            }
+            ''
+              mkdir -pv $out/isos
+
+              cp -v "${alpineV3-19-X86_64}" $out/isos/
+              cp -v "${alpineV3-19-Amd64}" $out/isos/
+              # cp -v "''${ubuntu-22-04-Arm64}" $out/isos/
+              cp -v "${ubuntu-22-04-Amd64}" $out/isos/
+
+              # https://discourse.nixos.org/t/find-a-fetchurl-file-in-nix-store/18781/3
+              mv -v $out/isos/*-"${alpineAarch64FullName}" $out/isos/"${alpineAarch64FullName}"
+              mv -v $out/isos/*-"${alpineX86_64FullName}" $out/isos/"${alpineX86_64FullName}"
+              # mv -v $out/isos/*-"''${ubuntuArm64FullName}" $out/isos/"${ubuntuArm64FullName}"
+              mv -v $out/isos/*-"${ubuntuAmd64FullName}" $out/isos/"${ubuntuAmd64FullName}"
+
+            '';
 
       };
     } //
@@ -34,11 +88,7 @@
             config = {
               allowUnfree = true;
               # Re test it!
-              overlays = [
-                (final: prev: {
-                  sl = final.hello;
-                })
-              ];
+              overlays = [ self.overlays.default ];
             };
           };
           # https://gist.github.com/tpwrules/34db43e0e2e9d0b72d30534ad2cda66d#file-flake-nix-L28
@@ -84,7 +134,7 @@
 
           formatter = pkgsAllowUnfree.nixpkgs-fmt;
 
-          apps.run-github-runner = {
+          apps.default = {
             type = "app";
             program = "${self.packages."${suportedSystem}".automatic-vm}/bin/run-nixos-vm";
           };
@@ -150,7 +200,7 @@
 
               alpine316 = pkgs.fetchurl {
                 url = "https://app.vagrantup.com/generic/boxes/alpine316/versions/4.3.8/providers/libvirt.box";
-                hash = "sha256-2h68dE9u6t+m8+gOT3YYD2fxb+/upRb3z79eth9uzEI=";
+                hash = "sha256-PTaqDB0/1Ch/rq2MXFDLU+KUswAf6V/o82YjbGV03vc=";
               };
 
               archlinux = pkgs.fetchurl {
@@ -261,8 +311,8 @@
 
               vagrantfileUbuntu = pkgs.writeText "vagrantfile-ubuntu" ''
                 Vagrant.configure("2") do |config|
-                  # config.vm.box = "generic/ubuntu2204"
-                  config.vm.box = "generic/ubuntu2304"
+                  config.vm.box = "generic/ubuntu2204"
+                  # config.vm.box = "generic/ubuntu2304"
 
                   config.vm.provider :libvirt do |v|
                     v.cpus=3
@@ -344,7 +394,7 @@
                   virtualisation.writableStore = true; # TODO: hardening
 
                   virtualisation.docker.enable = true;
-                  virtualisation.podman.enable = false; # Enabling k8s breaks podman
+                  virtualisation.podman.enable = true; # Enabling k8s breaks podman
 
                   virtualisation.libvirtd.enable = true;
 
@@ -353,7 +403,7 @@
 
                   environment.variables = {
                     VAGRANT_DEFAULT_PROVIDER = "libvirt";
-                    # VAGRANT_DEFAULT_PROVIDER = "virtualbox";
+                    # VAGRANT_DEFAULT_PROVIDER = "virtualbox"; # Is it an must for vagrant snapshots?
                     /*
                     https://github.com/erictossell/nixflakes/blob/e97cdba0d6b192655d01f8aef5a6691f587c61fe/modules/virt/libvirt.nix#L29-L36
                     */
@@ -367,50 +417,49 @@
 
                   };
 
-                virtualisation.memorySize = 1024 * 8; # Use MiB memory.
-                virtualisation.diskSize = 1024 * 50; # Use MiB memory.
-                virtualisation.cores = 8; # Number of cores.
-                virtualisation.graphics = true;
-                /*
-                export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200"
-                virtualisation.forwardPorts = [
-                  { from = "host"; host.port = 8888; guest.port = 80; }
-                ];
-                */
-
-                /*
+                  virtualisation.memorySize = 1024 * 8; # Use MiB memory.
+                  virtualisation.diskSize = 1024 * 50; # Use MiB memory.
+                  virtualisation.cores = 8; # Number of cores.
+                  virtualisation.graphics = true;
+                  /*
+                  export QEMU_NET_OPTS="hostfwd=tcp::10022-:2200"
+                  virtualisation.forwardPorts = [
+                    { from = "host"; host.port = 8888; guest.port = 80; }
+                  ];
+                  */
+                  /*
                   xdpyinfo | grep dimensions
 
                   xrandr --current
-                */
-                # virtualisation.resolution = { x = (1024 - 250); y = (768 - 250); };
-                virtualisation.resolution = lib.mkForce { x = 1024; y = 768; };
+                  */
+                  # virtualisation.resolution = { x = (1024 - 250); y = (768 - 250); };
+                  virtualisation.resolution = lib.mkForce { x = 1024; y = 768; };
 
-                virtualisation.qemu.options = [
-                  # Better display option
-                  # TODO: -display sdl,gl=on
-                  # https://gitlab.com/qemu-project/qemu/-/issues/761
-                  #"-vga virtio"
-                  #"-display gtk,zoom-to-fit=false"
-                  # Enable copy/paste
-                  # https://www.kraxel.org/blog/2021/05/qemu-cut-paste/
-                  #"-chardev qemu-vdagent,id=ch1,name=vdagent,clipboard=on"
-                  #"-device virtio-serial-pci"
-                  #"-device virtserialport,chardev=ch1,id=ch1,name=com.redhat.spice.0"
-                  # https://serverfault.com/a/1119403
-                  # "-device intel-iommu,intremap=on"
-                  # https://www.spice-space.org/spice-user-manual.html#Running_qemu_manually
-                  # remote-viewer spice://localhost:3001
+                  virtualisation.qemu.options = [
+                    # Better display option
+                    # TODO: -display sdl,gl=on
+                    # https://gitlab.com/qemu-project/qemu/-/issues/761
+                    #"-vga virtio"
+                    #"-display gtk,zoom-to-fit=false"
+                    # Enable copy/paste
+                    # https://www.kraxel.org/blog/2021/05/qemu-cut-paste/
+                    #"-chardev qemu-vdagent,id=ch1,name=vdagent,clipboard=on"
+                    #"-device virtio-serial-pci"
+                    #"-device virtserialport,chardev=ch1,id=ch1,name=com.redhat.spice.0"
+                    # https://serverfault.com/a/1119403
+                    # "-device intel-iommu,intremap=on"
+                    # https://www.spice-space.org/spice-user-manual.html#Running_qemu_manually
+                    # remote-viewer spice://localhost:3001
 
-                  # "-daemonize" # How to save the QEMU PID?
-                  "-machine vmport=off"
-                  "-vga qxl"
-                  "-spice port=3001,disable-ticketing=on"
-                  "-device virtio-serial"
-                  "-chardev spicevmc,id=vdagent,debug=0,name=vdagent"
-                  "-device virtserialport,chardev=vdagent,name=com.redhat.spice.0"
-                ];
-              };
+                    # "-daemonize" # How to save the QEMU PID?
+                    "-machine vmport=off"
+                    "-vga qxl"
+                    "-spice port=3001,disable-ticketing=on"
+                    "-device virtio-serial"
+                    "-chardev spicevmc,id=vdagent,debug=0,name=vdagent"
+                    "-device virtserialport,chardev=vdagent,name=com.redhat.spice.0"
+                  ];
+                };
 
               users.users.root = {
                 password = "root";
@@ -424,7 +473,8 @@
               # https://nixos.wiki/wiki/NixOS:nixos-rebuild_build-vm
               users.extraGroups.nixgroup.gid = 999;
 
-              security.sudo.wheelNeedsPassword = false; # TODO: hardening
+              # nix eval --impure --json .#nixosConfigurations.vm.config.security.sudo.package.override.__functionArgs
+              security.sudo.wheelNeedsPassword = true; # TODO: hardening
               users.users.nixuser = {
                 isSystemUser = true;
                 password = "101"; # TODO: hardening
@@ -489,28 +539,28 @@
                   nix-info
                   openssh
                   openssl
-                  sl
+                  foo-bar
                   starship
                   tilix
                   virt-manager
                   which
-                  sudo
+                  # sudo
 
                   (
                     writeScriptBin "prepare-vagrant-vms" ''
                       #! ${pkgs.runtimeShell} -e
 
-                      set +e
+                      # set -x
                       for i in {0..100};do
 
                         echo "The iteration number is: $i. Time: $(date +'%d/%m/%Y %H:%M:%S:%3N')";
 
-                        if vagrant box list | grep -q generic/ubuntu2304; then
+                        if (vagrant box list | grep -q generic/ubuntu2204) && (vagrant box list | grep -q generic/alpine316); then
                           break
                         fi
                       done;
 
-                      # $(vagrant global-status | grep -q alpine) || cd /home/nixuser/vagrant-examples/alpine && vagrant up
+                      $(vagrant global-status | grep -q alpine) || cd /home/nixuser/vagrant-examples/alpine && vagrant up
                       $(vagrant global-status | grep -q ubuntu) || cd /home/nixuser/vagrant-examples/ubuntu && vagrant up
                     ''
                   )
@@ -613,8 +663,9 @@
                   echo "vagrant global-status" >> "$DESTINATION"
                   echo "vagrant box list" >> "$DESTINATION"
                   echo "journalctl --user --unit copy-vagrant-examples-vagrant-up.service -b -f" >> "$DESTINATION"
-                  echo "journalctl --user --unit foo.service -b -f" >> "$DESTINATION"
+                  echo "journalctl --user --unit copy-vagrant-examples-vagrant-up.service -b -f" >> "$DESTINATION"
                   echo "prepare-vagrant-vms && cd /home/nixuser/vagrant-examples/ubuntu && vagrant ssh" >> "$DESTINATION"
+                  echo 'ls -alh "$ISOS_DIRETORY"' >> "$DESTINATION"
 
                   echo "Ended"
                 '';
@@ -625,50 +676,45 @@
               systemd.user.services.copy-vagrant-examples-vagrant-up = {
                 path = with pkgs; [
                   curl
+                  file
                   gnutar
                   gzip
                   procps
                   vagrant
                   xz
                 ];
-                /*
-                     generic/ubuntu2204 \
-                     "${ubuntu2204}" \
-                     --force \
-                     --provider \
-                     $PROVIDER \
-                && vagrant \
-                     box \
-                     add \
-                     generic/alpine316 \
-                     "${alpine316}" \
-                */
+
                 script = ''
                   #! ${pkgs.runtimeShell} -e
-
+                    set -x
                     BASE_DIR=/home/nixuser/vagrant-examples
                     mkdir -pv "$BASE_DIR"/{alpine,archlinux,ubuntu}
 
                     cd "$BASE_DIR"
 
                     cp -v "${vagrantfileAlpine}" alpine/Vagrantfile
-
                     cp -v "${vagrantfileArchlinux}" archlinux/Vagrantfile
-
                     cp -v "${vagrantfileUbuntu}" ubuntu/Vagrantfile
 
                     PROVIDER=libvirt
+
                     vagrant \
-                         box \
-                         add \
-                         generic/ubuntu2304 \
-                         "${ubuntu2304}" \
-                         --force \
-                         --provider \
-                         $PROVIDER \
-                    && echo 000 \
-                    && vagrant box list \
-                    && echo 111
+                        box \
+                        add \
+                        generic/ubuntu2204 \
+                        "${ubuntu2204}" \
+                        --force \
+                        --provider \
+                        $PROVIDER
+
+                    vagrant \
+                        box \
+                        add \
+                        generic/alpine316 \
+                        "${alpine316}" \
+                        --force \
+                        --provider \
+                        $PROVIDER
                 '';
                 wantedBy = [ "default.target" ];
               };
@@ -746,6 +792,16 @@
                     "${pkgs.firefox}"/share/applications/firefox.desktop \
                     /home/nixuser/Desktop/firefox.desktop
 
+                  ln \
+                    -sfv \
+                    "${pkgs.virtualbox}"/libexec/virtualbox/virtualbox.desktop \
+                    /home/nixuser/Desktop/vboxclient.desktop
+
+                  ln \
+                    -sfv \
+                    "${pkgs.virt-manager}"/share/applications/virt-manager.desktop \
+                    /home/nixuser/Desktop/virt-manager.desktop
+
                   echo "Ended"
                 '';
                 wantedBy = [ "xfce4-notifyd.service" ];
@@ -822,138 +878,22 @@
                 neovim
                 nixos-option
                 oh-my-zsh
+                sudo
                 xclip
                 zsh
                 zsh-autosuggestions
                 zsh-completions
-
-                # Looks like kubernetes needs atleast all this
-                kubectl
-                kubernetes
-                #
-                cni
-                cni-plugins
-                conntrack-tools
-                cri-o
-                cri-tools
-                ebtables
-                ethtool
-                flannel
-                iptables
-                socat
-
-                (
-                  writeScriptBin "fix-k8s-cluster-admin-key" ''
-                    #! ${pkgs.runtimeShell} -e
-                    sudo chmod 0660 -v /var/lib/kubernetes/secrets/cluster-admin-key.pem
-                    sudo chown root:kubernetes -v /var/lib/kubernetes/secrets/cluster-admin-key.pem
-                  ''
-                )
               ];
 
-              # Is this ok to kubernetes?
-              # Why free -h still show swap stuff but with 0?
-              swapDevices = pkgs.lib.mkForce [ ];
+              environment.variables.ISOS_DIRETORY = "${pkgs.isos}/isos";
 
-              # Is it a must for k8s?
-              # Take a look into:
-              # https://github.com/NixOS/nixpkgs/blob/9559834db0df7bb274062121cf5696b46e31bc8c/nixos/modules/services/cluster/kubernetes/kubelet.nix#L255-L259
-              boot.kernel.sysctl = {
-                # If it is enabled it conflicts with what kubelet is doing
-                # "net.bridge.bridge-nf-call-ip6tables" = 1;
-                # "net.bridge.bridge-nf-call-iptables" = 1;
-
-                # https://docs.projectcalico.org/v3.9/getting-started/kubernetes/installation/migration-from-flannel
-                # https://access.redhat.com/solutions/53031
-                "net.ipv4.conf.all.rp_filter" = 1;
-                # https://www.tenable.com/audits/items/CIS_Debian_Linux_8_Server_v2.0.2_L1.audit:bb0f399418f537997c2b44741f2cd634
-                # "net.ipv4.conf.default.rp_filter" = 1;
-                "vm.swappiness" = 0;
-              };
-
-              environment.variables.KUBECONFIG = "/etc/kubernetes/cluster-admin.kubeconfig";
-
-              #  environment.etc."containers/registries.conf" = {
-              #    mode = "0644";
-              #    text = ''
-              #      [registries.search]
-              #      registries = ['docker.io', 'localhost', 'gcr.io']
-              #    '';
-              #  };
-
-              services.kubernetes.roles = [ "master" "node" ];
-              services.kubernetes.masterAddress = "nixos";
-              services.kubernetes = {
-                flannel.enable = true;
-              };
-
-              environment.etc."kubernets/kubernetes-examples/appvia/deployment.yaml" = {
-                mode = "0644";
-                text = "${builtins.readFile ./kubernetes-examples/appvia/deployment.yaml}";
-              };
-
-              environment.etc."kubernets/kubernetes-examples/appvia/service.yaml" = {
-                mode = "0644";
-                text = "${builtins.readFile ./kubernetes-examples/appvia/service.yaml}";
-              };
-
-              environment.etc."kubernets/kubernetes-examples/appvia/ingress.yaml" = {
-                mode = "0644";
-                text = "${builtins.readFile ./kubernetes-examples/appvia/ingress.yaml}";
-              };
-
-              environment.etc."kubernets/kubernetes-examples/appvia/notes.md" = {
-                mode = "0644";
-                text = "${builtins.readFile ./kubernetes-examples/appvia/notes.md}";
-              };
-
-              # journalctl -u move-kubernetes-examples.service -b
-              systemd.services.move-kubernetes-examples = {
-                script = ''
-                  echo "Started move-kubernets-examples"
-
-                  # cp -rv ''\${./kubernetes-examples} /home/nixuser/
-                  cp -Rv /etc/kubernets/kubernetes-examples/ /home/nixuser/
-
-                  chown -Rv nixuser:nixgroup /home/nixuser/kubernetes-examples
-
-                  kubectl \
-                    apply \
-                    --file /home/nixuser/kubernetes-examples/deployment.yaml \
-                    --file /home/nixuser/kubernetes-examples/service.yaml \
-                    --file /home/nixuser/kubernetes-examples/ingress.yaml
-                '';
-                wantedBy = [ "multi-user.target" ];
-              };
-
-              # https://discourse.nixos.org/t/nixos-firewall-with-kubernetes/23673/2
-              # networking.firewall.trustedInterfaces ??
-              networking.firewall.allowedTCPPorts = [ 8000 8080 8443 9000 9443 ];
-
-              boot.kernelParams = [
-                "swapaccount=0"
-                "systemd.unified_cgroup_hierarchy=0"
-                "group_enable=memory"
-                "cgroup_enable=cpuset"
-                "cgroup_memory=1"
-                "cgroup_enable=memory"
-              ];
-
-              # ulimit -n
-              # https://github.com/NixOS/nixpkgs/issues/159964#issuecomment-1050080111
-              security.pam.loginLimits = [
-                {
-                  domain = "*";
-                  type = "-";
-                  item = "nofile";
-                  value = "9192";
-                }
-              ];
+              time.timeZone = "America/Recife";
 
               system.stateVersion = "22.11";
             })
-            #
+          #
 
+          { nixpkgs.overlays = [ self.overlays.default ]; }
         ];
         specialArgs = { inherit nixpkgs allAttrs; };
       };
