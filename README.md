@@ -305,3 +305,110 @@ https://github.com/NixOS/nixpkgs/issues/231561#issuecomment-1546638257
 
 [NixOS Secrets Management | SOPS-NIX](https://www.youtube.com/watch?v=G5f6GC7SnhU)
 
+### nix the planet
+
+```nix
+nixtheplanet.url = "github:matthewcroughan/nixtheplanet";
+```
+
+
+
+### Discourse
+
+
+```bash
+journalctl -xefu discourse
+journalctl -xefu nginx
+```
+
+
+```bash
+while ! systemctl is-active discourse &>/dev/null; do echo $(date +'%d/%m/%Y %H:%M:%S:%3N'); sleep 0.5; done
+
+firefox https://acme.test/ &
+```
+
+
+There are no more latest topics.
+
+```bash
+curl -sS -f http://acme.test/
+curl -sS -f https://acme.test/
+```
+
+
+```bash
+curl http://127.0.0.1/
+curl https://127.0.0.1/
+```
+
+```bash
+ls -alh /var/lib/acme/ | grep TODO
+```
+
+
+
+### Python
+
+
+```bash
+nix \
+shell \
+--ignore-environment \
+--max-jobs 0 \
+--override-flake \
+nixpkgs \
+github:NixOS/nixpkgs/ae2fc9e0e42caaf3f068c1bfdc11c71734125e06 \
+nixpkgs#auditwheel \
+nixpkgs#binutils.out \
+nixpkgs#glibc.bin \
+nixpkgs#git \
+nixpkgs#patchelf \
+nixpkgs#pax-utils \
+nixpkgs#poetry \
+nixpkgs#python3Full \
+nixpkgs#python3Packages.wheel \
+nixpkgs#python3Packages.wheel-filename \
+nixpkgs#python3Packages.wheel-inspect \
+nixpkgs#twine
+```
+
+
+```bash
+PKG_NAME=scipy
+
+cd "$(mktemp -d)" \
+&& wheel unpack $(nix build --no-link --print-out-paths --print-build-logs nixpkgs#python3Packages.$PKG_NAME.dist)/*
+
+
+find . -type f -iname '*.so' | wc -l
+```
+
+```bash
+find . -type f -iname '*.so' -exec ldd {} \; | grep -v vdso.so | cut -d' ' -f3 | sort -u | wc -l
+find . -type f -iname '*.so' -exec ldd {} \; | grep -v vdso.so | cut -d' ' -f3 | wc -l
+```
+
+
+```bash
+find . -type f -iname '*.so' -exec ldd {} \; | grep -v vdso.so | cut -d' ' -f1 | tr -d '\t' | cut -d'/' -f3 | head -n3
+find . -type f -iname '*.so' -exec patchelf --print-needed {} \; | grep -v vdso.so | cut -d' ' -f1 | tr -d '\t' | cut -d'/' -f3 | head -n3
+```
+
+
+```bash
+find . -type f -iname '*.so' -exec echo {} \; | xargs -I '{}' bash -c 'echo {} && ldd {} | wc -l' 
+find . -type f -iname '*.so' -exec ldd {} \; | wc -l 
+find . -type f -iname '*.so' -exec ldd {} \;  | sort -u | wc -l 
+```
+
+
+TODO: it does not have the `.dist` why?
+```bash
+python3Packages.opencv4
+python3Packages.opencv4.dist
+python3Packages.caffe
+python3Packages.caffe.dist
+python3Packages.theano
+python3Packages.theano.dist
+```
